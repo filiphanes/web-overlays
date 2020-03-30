@@ -1,0 +1,166 @@
+@import url('https://fonts.googleapis.com/css?family=Montserrat');
+
+html, body {
+    height: 1080px;
+    width: 1920px;
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Montserrat';
+    background-color: transparent;
+}
+
+.clear {
+    clear: both;
+}
+
+#scoreboard {
+    -webkit-animation-timing-function: ease-in-out;
+    -webkit-animation-duration: 2s;
+    width: 128px;
+    height: 50px;
+    margin: 1080px auto 0;
+    border-radius: 25px 25px 25px 25px;
+    box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.75);
+}
+
+@-webkit-keyframes animation-scoreboard{
+    0% { width: 128px; margin-top: 1080px; }
+    33% { width: 128px; margin-top: 800px; }
+    66% { width: 640px; margin-top: 800px; }
+    100% { width: 640px; margin-top: 800px; }
+}
+
+.team {
+    -webkit-animation-timing-function: ease-in-out;
+    animation-timing-function: ease-in-out;
+    -webkit-animation-duration: 2s;
+    animation-duration: 2s;
+    float: left;
+    display: block;
+    width: 0px;
+    height: 44px;
+    padding-top: 6px;
+    border: 0 solid black;
+    text-align: center;
+    font-size: 22pt;
+    color: white;
+}
+
+#team1div {
+    background-color: #3093c7;
+    background-image: -webkit-gradient(linear, left top, left bottom, from(#3093c7), to(#1c5a85));
+    background-image: -webkit-linear-gradient(top, #3093c7, #1c5a85);
+    background-image: -moz-linear-gradient(top, #3093c7, #1c5a85);
+    background-image: -ms-linear-gradient(top, #3093c7, #1c5a85);
+    background-image: -o-linear-gradient(top, #3093c7, #1c5a85);
+    background-image: linear-gradient(to bottom, #3093c7, #1c5a85);
+    filter:progid:DXImageTransform.Microsoft.gradient(GradientType=0,startColorstr=#3093c7, endColorstr=#1c5a85);
+    border-radius: 25px 0px 0px 25px;
+}
+
+#team2div {
+    background-color: #a90329;
+    background-image: -webkit-gradient(linear, left top, left bottom, from(#a90329), to(#6d0019));
+    background-image: -webkit-linear-gradient(top, #a90329, #6d0019);
+    background-image: -moz-linear-gradient(top, #a90329, #6d0019);
+    background-image: -ms-linear-gradient(top, #a90329, #6d0019);
+    background-image: -o-linear-gradient(top, #a90329, #6d0019);
+    background-image: linear-gradient(to bottom, #a90329, #6d0019);
+    filter:progid:DXImageTransform.Microsoft.gradient(GradientType=0,startColorstr=#a90329, endColorstr=#6d0019);
+    border-radius: 0px 25px 25px 0px;
+}
+
+@-webkit-keyframes animation-team {
+    0% { width: 0px; }
+    33% { width: 0px; }
+    66% { width: 256px; }
+    100% { width: 256px; }
+}
+
+.team-name {
+    -webkit-animation-timing-function: ease-in-out;
+    -webkit-animation-duration: 2s;
+    text-shadow: 0px 0px 2px rgba(0, 0, 0, 1);
+    width: 0px;
+}
+
+@-webkit-keyframes animation-team-name {
+    0% { opacity: 0; }
+    66% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+#scorePlaceholder {
+    float: left;
+    width: 128px;
+}
+
+#score {
+    -webkit-animation-timing-function: ease-in-out;
+    animation-timing-function: ease-in-out;
+    -webkit-animation-duration: 2s;
+    animation-duration: 2s;
+    position: absolute;
+    top: 1080px;
+    left: 893px;
+    width: 134px;
+    height: 47px;
+    padding-top: 9px;
+    text-align: center;
+    background-color: white;
+    font-size: 22pt;
+    color: black;
+    border-radius: 3px;
+    border: 0 solid black;
+    box-shadow: 0px 0px 5px 1px rgba(0,0,0,0.75);
+}
+
+@-webkit-keyframes animation-score {
+    0% { top: 1080px; }
+    33% { top: 797px; }
+    100% { top: 797px; }
+}
+
+.show #score {
+    top: 797px;
+}
+.show #scoreboard {
+    margin-top: 800px;
+    width: 640px;
+}
+.show .team {
+    width: 256px;
+}
+.show .team-name {
+    width: 256px;
+}
+
+.animated #score {
+    visibility: visible;
+    -webkit-animation-name: "animation-score";
+    animation-name: "animation-score";
+    animation-direction: normal;
+}
+.animated #scoreboard {
+    visibility: visible;
+    -webkit-animation-name: "animation-scoreboard";
+    animation-name: "animation-scoreboard";
+    animation-direction: normal;
+}
+.animated .team {
+    -webkit-animation-name: "animation-team";
+    animation-name: "animation-team";
+    animation-direction: normal;
+}
+.animated .team-name {
+    -webkit-animation-name: "animation-team-name";
+    animation-name: "animation-team-name";
+    animation-direction: normal;
+}
+
+.show.animated #score,
+.show.animated #scoreboard,
+.show.animated .team,
+.show.animated .team-name {
+    animation-direction: reverse;
+}

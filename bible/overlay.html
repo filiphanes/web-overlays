@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bible overlay</title>
+<style>
+@import url('https://fonts.googleapis.com/css?family=PT+Sans');
+
+html {
+	width: 1280px;
+	height: 720px;
+    overflow: hidden;
+}
+body {
+	width: 1280px;
+	height: 720px;
+	margin: 0;
+	overflow: hidden;
+	font-family: 'PT Sans';
+	background: transparent;
+}
+#lower-third {
+	position: absolute;
+    bottom: 50px;
+    left: 40px;
+    opacity: 0;
+    transition: all 1s ease-in;
+}
+.show #lower-third {
+    opacity: 1;
+}
+
+#line1 {
+    font-size: 5em;
+    padding: 0 2rem;
+    color: white;
+    text-shadow: 5px 5px 5px black;
+    white-space: nowrap;
+}
+#line2 {
+    font-size: 4em;
+    padding: 0 2rem;
+    color: white;
+    line-height: 1;
+    text-shadow: 4px 4px 5px black;
+}
+</style>
+</head>
+<body>
+    <div id="lower-third">
+        <div id="line1">Main header line</div>
+        <div id="line2"></div>
+    </div>
+<script src="../js/gun.min.js"></script>
+<script>
+gun = Gun('http://localhost:8080/gun')
+let overlay = gun.get('bible-overlay');
+overlay.get('line1').on(function(data, key){
+    document.getElementById("line1").innerHTML = data;
+    console.log(key, data);
+});
+overlay.get('line2').on(function(data, key){
+    document.getElementById("line2").innerHTML = data;
+    console.log(key, data);
+});
+overlay.get('show').on(function(data, key){
+    document.body.classList.toggle('show', data);
+    console.log(key, data);
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script>
+function startTime() {
+    var today = new Date();
+    var h = today.getHours();
+    var m = today.getMinutes();
+    m = checkTime(m);
+//    var s = today.getSeconds();
+//    s = checkTime(s);
+    document.getElementById('txt').innerHTML = h + ":" + m/* + ":" + s*/;
+    var t = setTimeout(startTime, 500);
+}
+function checkTime(i) {
+    if (i < 10) {i = "0" + i};  // add zero in front of numbers < 10
+    return i;
+}
+</script>
+</head>
+
+<body onload="startTime()" style="background: black;">
+
+<div id="txt" style="
+    color: white;
+    font-size: 54px;
+    font-family: opensans,sans-serif;
+"></div>
+
+</body>
+</html>
+

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Lower Third Controller</title>
+<link rel="stylesheet" href="../css/bootstrap.min.css">
+<style>
+</style>
+</head>
+<body>
+<div class="container-fluid">
+	<div class="row">
+		<div class="col-md">
+			<div class="card">
+				<div class="card-body">
+					<h5 class="card-title">Lower Third control</h5>
+					<div class="form-group">
+						<input class="form-control" type="text" id="line1" value="Text Line 1">
+						<input class="form-control" type="text" id="line2" value="Text Line 2">
+					</div>
+					<div>
+						<button class="btn btn-lg btn-success" onclick='show()'>Show</button>
+						<button class="btn btn-lg btn-primary" onclick='hide()'>Hide</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+<script src="../js/gun.min.js"></script>
+<script>
+var gun = Gun('http://localhost:8080/gun')
+var overlay = gun.get('scoreboard');
+
+function gunSyncValue(elementID) {
+	var element = document.getElementById(elementID);
+	// Receive updates from gun
+	overlay.get(elementID).on(function(data, key){
+		element.value = data;
+	});
+	// Send changes to gun
+	element.addEventListener('change', function(){
+		overlay.get(elementID).put(element.value)
+	});
+};
+
+gunSyncValue('line1');
+gunSyncValue('line2');
+
+function show() {overlay.get('show').put(true)};
+function hide() {overlay.get('show').put(false)};
+</script>
+</body>
+</html>

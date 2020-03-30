@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Scoreboard</title>
+<link rel="stylesheet" href="css/overlay.css">
+</head>
+<body>
+	<div id="score">
+		<span id="score1">0</span> - <span id="score2">0</span>
+	</div>
+	<div id="scoreboard">
+		<div id="team1div" class="team">
+			<span id="team1" class="team-name">Team 1</span>
+		</div>
+		<div id="scorePlaceholder">.</div>
+		<div id="team2div" class="team">
+			<span id="team2" class="team-name">Team 2</span>
+		</div>
+		<div class="clear"></div>
+	</div>
+
+<script src="../js/gun.min.js"></script>
+<script>
+    var gun = Gun('http://localhost:8080/gun')
+    var overlay = gun.get('scoreboard');
+    
+    function gunSyncHtml(elementID) {
+        var element = document.getElementById(elementID);
+        overlay.get(elementID).on(function(data, key){
+            element.innerHTML = data;
+        });
+    };
+    
+    gunSyncHtml('team1');
+    gunSyncHtml('team2');
+    gunSyncHtml('score1');
+    gunSyncHtml('score2');
+    
+    overlay.get('show').on(function (data, key) {
+        if (data != document.body.classList.contains('show')) {
+            // animation is finished by toggling .show class in event listener animationend
+            document.body.classList.add('animated');
+        }
+    });
+    
+    window.addEventListener("load", function(){
+        // each animation is finished by toggling .show class
+        document.getElementById('scoreboard').addEventListener("animationend", function() {
+            document.body.classList.toggle('show');
+            document.body.classList.remove('animated');
+        });
+    }, false);
+</script>
+</body>

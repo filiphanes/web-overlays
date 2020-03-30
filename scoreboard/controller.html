@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Scoreboard Controller</title>
+<link rel="stylesheet" href="../css/bootstrap-darkly.min.css">
+<style>
+html, body {
+	background: #222222;
+}
+input[type="number"] {
+	width: 3rem;
+}
+</style>
+</head>
+<body>
+<div class="container-fluid my-3">
+	<div class="row">
+		<div class="col-md">
+			<div class="card">
+				<div class="card-body">
+					<h5 class="card-title">Scoreboard control</h5>
+					<div class="form-row">
+						<div class="form-group col-md-6">
+							<label for="team1">Team 1:</label>
+							<input class="form-control" type="text" placeholder="Team 1 Name" id="team1" value="Team 1">
+						</div>
+						<div class="form-group col-md-6">
+							<label for="team2">Team 2:</label>
+							<input class="form-control" type="text" placeholder="Team 2 Name" id="team2" value="Team 2">
+						</div>
+					</div>
+					<div class="form-group">
+						<label>Score:</label>
+						<div class="input-group mb-3">
+							<input class="form-control" type="number" id="score1" value="0">
+							<span class="form-control input-group-text col-1">-</span>
+							<input class="form-control" type="number" id="score2" value="0">
+						</div>
+						<small class="form-text text-muted">Team names and Scores are updated automatically on change and show.</small>
+					</div>
+					<div>
+						<button class="btn btn-lg btn-success" onclick='show()'>Show</button>
+						<button class="btn btn-lg btn-primary" onclick='hide()'>Hide</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<small class="text-muted">The scoreboard animation in this example was made by <a href="http://glowdragon.de" target="_blank">glowdragon.de</a></small>
+</div>
+<script src="../js/gun.min.js"></script>
+<script>
+var gun = Gun('http://localhost:8080/gun')
+var overlay = gun.get('scoreboard');
+
+function gunSyncValue(elementID) {
+	var element = document.getElementById(elementID);
+	// Receive updates from gun
+	overlay.get(elementID).on(function(data, key){
+		element.value = data;
+	});
+	// Send changes to gun
+	element.addEventListener('change', function(){
+		overlay.get(elementID).put(element.value)
+	});
+};
+
+gunSyncValue('team1');
+gunSyncValue('team2');
+gunSyncValue('score1');
+gunSyncValue('score2');
+
+function show() {overlay.get('show').put(true)};
+function hide() {overlay.get('show').put(false)};
+</script>
+</body>
+</html>

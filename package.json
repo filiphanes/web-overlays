@@ -1,0 +1,32 @@
+{
+  "name": "websocket-overlay",
+  "version": "1.0.0",
+  "description": "HTML5 overlays controlled via websocket server from controller.html",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/filiphanes/gun-overlays.git"
+  },
+  "keywords": [
+    "html5",
+    "overlay",
+    "websocket",
+    "obs-studio",
+    "splitx",
+    "casparcg",
+    "broadcast"
+  ],
+  "author": "Filip Hanes <filip.hanes@pm.me>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/filiphanes/gun-overlays/issues"
+  },
+  "homepage": "https://github.com/filiphanes/gun-overlays#readme",
+  "dependencies": {
+    "gun": "^0.2020.301"
+  }
+}
