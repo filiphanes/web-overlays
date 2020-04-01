@@ -59,6 +59,7 @@ This project was inspired by
 - https://github.com/Scrxtchy/ts3-overlay-ws
 - https://github.com/slugalisk/win-loss-overlay
 - https://github.com/filiphanes/websocket-overlays
+- https://github.com/ak5/svelte-gun-example
 
 # TODO
 - more overlays
