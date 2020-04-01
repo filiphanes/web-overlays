@@ -54,7 +54,7 @@ body {
 <script src="../js/gun.min.js"></script>
 <script>
 gun = Gun('https://gun.filiphanes.sk/gun')
-let overlay = gun.get('bible-overlay').get(window.location.hash || 'demo');
+let overlay = gun.get('bible').get(window.location.hash || 'demo');
 overlay.get('line1').on(function(data, key){
     document.getElementById("line1").innerHTML = data;
     console.log(key, data);
