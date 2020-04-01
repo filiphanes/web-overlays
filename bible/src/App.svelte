@@ -27,7 +27,7 @@
   }
   let shownAddress = selected;
 
-  let gun = Gun('http://localhost:8080/gun');
+  let gun = Gun('http://gun-overlays.herokuapp.com/gun');
   let overlay = gun.get('bible-overlay');
   overlay.map().on(function(data, key){
     console.log('Received', key, data);

@@ -53,7 +53,7 @@ body {
     </div>
 <script src="../js/gun.min.js"></script>
 <script>
-gun = Gun('http://localhost:8080/gun')
+gun = Gun('http://gun-overlays.herokuapp.com/gun')
 let overlay = gun.get('bible-overlay');
 overlay.get('line1').on(function(data, key){
     document.getElementById("line1").innerHTML = data;
