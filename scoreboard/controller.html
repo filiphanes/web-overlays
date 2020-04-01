@@ -51,8 +51,8 @@ input[type="number"] {
 </div>
 <script src="../js/gun.min.js"></script>
 <script>
-var gun = Gun('http://gun-overlays.herokuapp.com/gun')
-var overlay = gun.get('scoreboard');
+var gun = Gun('https://gun.filiphanes.sk/gun')
+var overlay = gun.get('scoreboard').get(window.location.hash || 'demo');
 
 function gunSyncValue(elementID) {
 	var element = document.getElementById(elementID);

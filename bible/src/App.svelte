@@ -27,8 +27,8 @@
   }
   let shownAddress = selected;
 
-  let gun = Gun('http://gun-overlays.herokuapp.com/gun');
-  let overlay = gun.get('bible-overlay');
+  let gun = Gun('https://gun.filiphanes.sk/gun');
+  let overlay = gun.get('bible').get(window.location.hash || 'demo');
   overlay.map().on(function(data, key){
     console.log('Received', key, data);
   });
