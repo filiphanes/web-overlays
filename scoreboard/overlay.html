@@ -21,8 +21,10 @@
 	</div>
 
 <script src="../js/gun.min.js"></script>
+<script src="../js/config.js"></script>
 <script>
-    var gun = Gun('https://gun.filiphanes.sk/gun')
+    GUN_SUPER_PEERS = GUN_SUPER_PEERS || ['http://127.0.0.1/gun'];
+    var gun = Gun(GUN_SUPER_PEERS);
     var overlay = gun.get('scoreboard').get(window.location.hash || 'demo');
     
     function gunSyncHtml(elementID) {

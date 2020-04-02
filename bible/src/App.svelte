@@ -7,9 +7,7 @@
   let line1 = '';
   let line2 = '';
   let lastAddresses = [
-    {book: "gn", chapter: 1, verse: 1, verseto: 1},
-    {book: "z", chapter: 150, verse: 1, verseto: 1},
-    {book: "jn", chapter: 3, verse: 16, verseto: 16},
+    {book: "gn", chapter: 1, verse: 1, count: 1},
   ];
 
   let books = biblia.books;
@@ -23,11 +21,12 @@
     book: "gn",
     chapter: 1,
     verse: 1,
-    verseto: 1
+    count: 1
   }
   let shownAddress = selected;
 
-  let gun = Gun('https://gun.filiphanes.sk/gun');
+  GUN_SUPER_PEERS = GUN_SUPER_PEERS || ['http://127.0.0.1/gun'];
+  let gun = Gun(GUN_SUPER_PEERS);
   let overlay = gun.get('bible').get(window.location.hash || 'demo');
   overlay.map().on(function(data, key){
     console.log('Received', key, data);
@@ -57,7 +56,6 @@
   }
 
   $: aBook = booksByAbbr[shownAddress.book];
-  $: selected.verseto = selected.verse;
   $: overlayAddress.put(selected);
   $: overlay.get('line1').put(addressAsString(selected));
   $: overlay.get('line2').put(addressContent(selected));
@@ -67,7 +65,7 @@
       book: address.book,
       chapter: address.chapter,
       verse: address.verse,
-      verseto: address.verseto
+      count: address.count
     });
     lastAddresses = lastAddresses.filter((h,i) => i === 0 || !equalAddresses(h, address));
   }
@@ -76,15 +74,15 @@
     return booksByAbbr[address.book].name + ' ' +
            address.chapter +
            (address.verse ? ','+address.verse : '') +
-           (address.verseto != address.verse && address.verseto ? '-'+address.verseto : '');
+           (address.count > 1 ? '-'+(address.verse+address.count-1) : '');
   }
 
   function addressContent(address){
     var book = booksByAbbr[shownAddress.book];
     var content = '';
     if (book.chapters[selected.chapter]) {
-      for (var i=selected.verse; i <= selected.verseto; i++) {
-        content += book.chapters[selected.chapter][i-1] || '';
+      for (var i=selected.verse; i < selected.verse+selected.count; i++) {
+        content += '\n' + book.chapters[selected.chapter][i-1] || '';
       }
     }
     return content;
@@ -94,13 +92,13 @@
     return  a.book == b.book &&
             a.chapter == b.chapter &&
             a.verse == b.verse &&
-            a.verseto == b.verseto;
+            a.count == b.count;
   }
 
   function addressSelector(address) {
     address.chapter = address.chapter || '';
     address.verse = address.verse || '';
-    address.verseto = address.verseto || '';
+    address.count = address.count || 1;
     return function() {selected = address};
   }
 
@@ -133,6 +131,7 @@
     height: 10rem;
     overflow: scroll;
     float: left;
+    max-width: 15rem;
   }
   .book-item {
     width: 100%;
@@ -143,6 +142,7 @@
   .address-item {
     width: 100%;
     margin: 0 0 .25rem 0;
+    max-width: 30rem;
   }
   .address-set {
     width: auto;
@@ -161,6 +161,11 @@
   }
   :global(body) {
     color: white;
+  }
+  button {
+    margin: 0;
+    line-height: 2rem;
+    width: 2.8rem;
   }
 </style>
 
@@ -185,15 +190,20 @@
 <div style="display: inline-block; margin: 0 .5rem 0 0;">
   Kapitola: {selected.chapter}
   <Keypad bind:value={selected.chapter} max={Object.keys(aBook.chapters).length} />
+  <button class="control-button btn" on:click={toggleLine} class:btn-danger={shown} class:btn-success={!shown}>
+    {#if shown}Skryť{:else}Zobraziť{/if}
+  </button>
 </div>
 <div style="display: inline-block;">
-  Verš: {selected.verse}
+  Od verša: {selected.verse}
   <Keypad bind:value={selected.verse} max={(aBook.chapters[selected.chapter]||[]).length} />
+  <button class="btn btn-primary" on:click={function(){selected.count -= 1}}
+          disabled={selected.count <= 1}>-1</button>
+  <button class="btn btn-primary" on:click={function(){selected.count += 1}}
+          disabled={selected.verse+selected.count > (aBook.chapters[selected.chapter]||[]).length}>+1</button>
+  do {selected.verse + selected.count - 1}
 </div>
 
-<button class="control-button btn" on:click={toggleLine} class:btn-danger={shown} class:btn-success={!shown}>
-  {#if shown}Skryť{:else}Zobraziť{/if}
-</button>
 <div class="address">{line1}</div>
 <span class="vers">{@html line2}</span>
 
