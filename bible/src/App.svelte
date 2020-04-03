@@ -6,6 +6,7 @@
   let shown = false;
   let line1 = '';
   let line2 = '';
+  let bodyclass = '';
   let lastAddresses = [
     {book: "gn", chapter: 1, verse: 1, count: 1},
   ];
@@ -28,14 +29,14 @@
   GUN_SUPER_PEERS = GUN_SUPER_PEERS || ['http://127.0.0.1/gun'];
   let gun = Gun(GUN_SUPER_PEERS);
   let overlay = gun.get('bible').get(window.location.hash || 'demo');
-  overlay.map().on(function(data, key){
-    console.log('Received', key, data);
-  });
   overlay.get('show').on(function(data, key){shown = data});
   let overlayAddress = overlay.get('address');
   overlayAddress.map().on(function(data, key){shownAddress[key] = data});
-  overlay.get('line1').on(function(data){line1 = data});
-  overlay.get('line2').on(function(data){line2 = data});
+  let overlayLine1 = overlay.get('line1');
+  let overlayLine2 = overlay.get('line2');
+  let overlayBodyClass = overlay.get('bodyclass');
+  overlayLine1.on(function(data){line1 = data});
+  overlayLine2.on(function(data){line2 = data});
 
   $: filteredBooks = bookFilter
     ? books.filter(matchesBook)
@@ -56,9 +57,10 @@
   }
 
   $: aBook = booksByAbbr[shownAddress.book];
+  $: selected.count = selected.verse ? selected.count : 1;
   $: overlayAddress.put(selected);
-  $: overlay.get('line1').put(addressAsString(selected));
-  $: overlay.get('line2').put(addressContent(selected));
+  $: overlayLine1.put(addressAsString(selected));
+  $: overlayLine2.put(addressContent(selected));
 
   function addToLastAddresses(address) {
     lastAddresses.unshift({
@@ -71,18 +73,22 @@
   }
 
   function addressAsString(address){
-    return booksByAbbr[address.book].name + ' ' +
-           address.chapter +
-           (address.verse ? ','+address.verse : '') +
-           (address.count > 1 ? '-'+(address.verse+address.count-1) : '');
+    var s = booksByAbbr[address.book].name + ' ' + address.chapter;
+    if (address.verse) {
+      s += ',' + address.verse;
+      if (address.count > 1) {
+        s += '-' + (address.verse + address.count - 1);
+      }
+    }
+    return s;
   }
 
   function addressContent(address){
     var book = booksByAbbr[shownAddress.book];
     var content = '';
-    if (book.chapters[selected.chapter]) {
+    if (book.chapters[selected.chapter] && selected.verse) {
       for (var i=selected.verse; i < selected.verse+selected.count; i++) {
-        content += '\n' + book.chapters[selected.chapter][i-1] || '';
+        content += '\n' + (book.chapters[selected.chapter][i-1] || '');
       }
     }
     return content;
@@ -207,3 +213,9 @@
 <div class="address">{line1}</div>
 <span class="vers">{@html line2}</span>
 
+<div class="bodyclass">
+  Téma: {bodyclass}
+  <select bind:value={bodyclass} on:change="{() => overlayBodyClass.put(bodyclass)}">
+    <option value="" selected>Jednoduché písmo</option>
+    <option value="fullscreen-white-bg">Fulscreen biele pozadie</option>
+  </div>
