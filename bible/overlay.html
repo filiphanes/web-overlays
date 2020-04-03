@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
 <meta charset="utf-8">
 <title>Bible overlay</title>
@@ -19,14 +19,14 @@ body {
 	font-family: 'PT Sans';
 	background: transparent;
 }
-#lower-third {
+#overlay {
 	position: absolute;
     bottom: 50px;
     left: 40px;
     opacity: 0;
     transition: all 1s ease-in;
 }
-.show #lower-third {
+#overlay.show {
     opacity: 1;
 }
 
@@ -36,6 +36,7 @@ body {
     color: white;
     text-shadow: 5px 5px 5px black;
     white-space: nowrap;
+    font-weight: bold;
 }
 #line2 {
     font-size: 4em;
@@ -44,10 +45,66 @@ body {
     line-height: 1;
     text-shadow: 4px 4px 5px black;
 }
+#bg {
+    display: none;
+}
+</style>
+
+<style>
+.fullscreen-white-bg #overlay {
+	position: static;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 1;
+}
+.fullscreen-white-bg #bg {
+    background: white;
+    display: block;
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    opacity: .5;
+    transform: rotate(-45deg) translate(0, -100%);
+    transition: transform 1s;
+}
+.fullscreen-white-bg .show #bg {
+    transform: rotate(-45deg) translate(0, 0);
+}
+.fullscreen-white-bg #line1 {
+    font-size: 2.5em;
+    padding: 0;
+    color: black;
+    margin: 4rem;
+    text-shadow: none;
+    white-space: nowrap;
+    opacity: 0;
+    text-align: center;
+    transition: all .3s ease-in;
+}
+.fullscreen-white-bg #line2 {
+    font-size: 2.3em;
+    padding: 0 20%;
+    color: black;
+    line-height: 1.5;
+    text-shadow: none;
+    opacity: 0;
+    text-align: center;
+    transition: all .3s ease-in;
+}
+.fullscreen-white-bg .show #line1,
+.fullscreen-white-bg .show #line2 {
+    opacity: 1;
+    transform: translate(0, 0);
+}
 </style>
 </head>
 <body>
-    <div id="lower-third">
+    <div id="overlay">
+        <div id="bg"></div>
         <div id="line1">Main header line</div>
         <div id="line2"></div>
     </div>
@@ -66,7 +123,11 @@ overlay.get('line2').on(function(data, key){
     console.log(key, data);
 });
 overlay.get('show').on(function(data, key){
-    document.body.classList.toggle('show', data);
+    document.getElementById('overlay').classList.toggle('show', data);
+    console.log(key, data);
+});
+overlay.get('bodyclass').on(function(data, key){
+    document.body.className = data;
     console.log(key, data);
 });
 </script>
