@@ -1,22 +1,21 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import Keypad from "./Keypad.svelte";
-  import biblia from "./roh.json";
 
+  /* Synced variables */
   let shown = false;
   let line1 = '';
   let line2 = '';
   let bodyclass = '';
-  let lastAddresses = [
-    {book: "gn", chapter: 1, verse: 1, count: 1},
-  ];
+  let bibleid = 'roh';
+  
+  let loadingBible;
 
-  let books = biblia.books;
+  let books = [];
   let booksByAbbr = new Map();
-  books.forEach(book => {booksByAbbr[book.abbreviation] = book});
 
   let bookFilter = "";
-  let aBook;
+  let shownBook;
 
   let selected = {
     book: "gn",
@@ -26,6 +25,10 @@
   }
   let shownAddress = selected;
 
+  let lastAddresses = [
+    {book: "gn", chapter: 1, verse: 1, count: 1},
+  ];
+
   GUN_SUPER_PEERS = GUN_SUPER_PEERS || ['http://127.0.0.1/gun'];
   let gun = Gun(GUN_SUPER_PEERS);
   let overlay = gun.get('bible').get(window.location.hash || 'demo');
@@ -33,17 +36,46 @@
   let overlayAddress = overlay.get('address');
   overlayAddress.map().on(function(data, key){shownAddress[key] = data});
   let overlayLine1 = overlay.get('line1');
-  let overlayLine2 = overlay.get('line2');
-  let overlayBodyClass = overlay.get('bodyclass');
   overlayLine1.on(function(data){line1 = data});
+  let overlayLine2 = overlay.get('line2');
   overlayLine2.on(function(data){line2 = data});
+  let overlayBodyClass = overlay.get('bodyclass');
+  overlayBodyClass.on(function(data){bodyclass = data});
+  let overlayBibleid = overlay.get('bibleid');
+  overlayBibleid.on(function(data){bibleid = data});
 
-  $: filteredBooks = bookFilter
-    ? books.filter(matchesBook)
-    : books;
-  // $: filteredLastAddresses = bookFilter
-  //   ? lastAddresses.filter(h => matchesBook(booksByAbbr[h.book]))
-  //   : lastAddresses;
+  $: loadBible(bibleid + '.json');
+  $: shownBook = booksByAbbr[shownAddress.book] || {chapters:[], name: ""};
+  $: selected.count = selected.verse ? selected.count : 1;
+  $: overlayAddress.put(selected);
+  $: overlayLine1.put(addressAsString(selected));
+  $: overlayLine2.put(addressContent(selected));
+  $: filteredBooks = bookFilter ? books.filter(matchesBook) : books;
+  $: bookLength = (shownBook.chapters[selected.chapter]||[]).length;
+
+  /* Disabled last address filtering
+  $: filteredLastAddresses = bookFilter
+    ? lastAddresses.filter(h => matchesBook(booksByAbbr[h.book]))
+    : lastAddresses;
+  */
+
+
+  function loadBible(path) {
+    loadingBible = true;
+    console.log('Loading Bible', path)
+    let request = new XMLHttpRequest();
+    request.open('GET', path);
+    request.responseType = 'json';
+    request.send();
+    request.onload = function() {
+      books = request.response.books;
+      books.forEach(book => {booksByAbbr[book.abbreviation] = book});
+      /* Redraw */
+      lastAddresses = lastAddresses;
+      selected = selected;
+      loadingBible = false;
+    }
+  }
 
   function matchesBook(book) {
     const prefix = bookFilter.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -56,12 +88,6 @@
     );
   }
 
-  $: aBook = booksByAbbr[shownAddress.book];
-  $: selected.count = selected.verse ? selected.count : 1;
-  $: overlayAddress.put(selected);
-  $: overlayLine1.put(addressAsString(selected));
-  $: overlayLine2.put(addressContent(selected));
-
   function addToLastAddresses(address) {
     lastAddresses.unshift({
       book: address.book,
@@ -73,6 +99,7 @@
   }
 
   function addressAsString(address){
+    if (!booksByAbbr[address.book]) return '';
     var s = booksByAbbr[address.book].name + ' ' + address.chapter;
     if (address.verse) {
       s += ',' + address.verse;
@@ -86,7 +113,7 @@
   function addressContent(address){
     var book = booksByAbbr[shownAddress.book];
     var content = '';
-    if (book.chapters[selected.chapter] && selected.verse) {
+    if (book && selected.verse && book.chapters[selected.chapter]) {
       for (var i=selected.verse; i < selected.verse+selected.count; i++) {
         content += '\n' + (book.chapters[selected.chapter][i-1] || '');
       }
@@ -142,7 +169,7 @@
   .book-item {
     width: 100%;
     margin: 0 0 .25rem 0;
-    padding: .25rem .5rem;
+    padding: 0 .5rem;
     text-align: left;
   }
   .address-item {
@@ -152,7 +179,7 @@
   }
   .address-set {
     width: auto;
-    padding: .25rem .5rem;
+    padding: 0 .5rem;
     margin: 0;
     text-align: left;
   }
@@ -187,7 +214,7 @@
 <div class="address-filter">
   {#each lastAddresses as address, i}
   <div class="address-item btn-group">
-    <button class="address-set btn" class:btn-primary={equalAddresses(address, shownAddress)} on:click={addressSelector(address)}>{addressAsString(address)}</button>
+    <button class="address-set btn" class:btn-primary={equalAddresses(address, shownAddress)} on:click={addressSelector(address)}>{addressAsString(address) || (address.book+' '+address.chapter+','+address.verse)}</button>
     <button class="btn address-remove" on:click={removeLastAddress(i)}>×</button>
   </div>
   {/each}
@@ -195,27 +222,41 @@
 
 <div style="display: inline-block; margin: 0 .5rem 0 0;">
   Kapitola: {selected.chapter}
-  <Keypad bind:value={selected.chapter} max={Object.keys(aBook.chapters).length} />
+  <Keypad bind:value={selected.chapter} max={Object.keys(shownBook.chapters).length} />
   <button class="control-button btn" on:click={toggleLine} class:btn-danger={shown} class:btn-success={!shown}>
     {#if shown}Skryť{:else}Zobraziť{/if}
   </button>
 </div>
 <div style="display: inline-block;">
-  Od verša: {selected.verse}
-  <Keypad bind:value={selected.verse} max={(aBook.chapters[selected.chapter]||[]).length} />
+  Od verša: {selected.verse} do {selected.verse + selected.count - 1}
+  <Keypad bind:value={selected.verse} max={bookLength} />
   <button class="btn btn-primary" on:click={function(){selected.count -= 1}}
           disabled={selected.count <= 1}>-1</button>
   <button class="btn btn-primary" on:click={function(){selected.count += 1}}
-          disabled={selected.verse+selected.count > (aBook.chapters[selected.chapter]||[]).length}>+1</button>
-  do {selected.verse + selected.count - 1}
+          disabled={selected.verse+selected.count > bookLength}>+1</button>
+  <button class="btn btn-primary" on:click={function(){selected.verse=Math.max(1,selected.verse-selected.count)}}
+          disabled={selected.verse <= 1}>⇐</button>
+  <button class="btn btn-primary" on:click={function(){selected.verse=Math.min(selected.verse+selected.count,bookLength-1)}}
+          disabled={selected.verse+selected.count > bookLength}>⇒</button>
 </div>
 
 <div class="address">{line1}</div>
 <span class="vers">{@html line2}</span>
 
+<br/>
 <div class="bodyclass">
-  Téma: {bodyclass}
+  Téma:
   <select bind:value={bodyclass} on:change="{() => overlayBodyClass.put(bodyclass)}">
-    <option value="" selected>Jednoduché písmo</option>
-    <option value="fullscreen-white-bg">Fulscreen biele pozadie</option>
-  </div>
+    <option value="" selected>Predvolené</option>
+    <option value="simple-with-shadow" selected>Jednoduché s tieňom</option>
+    <option value="fullscreen-white-bg">Fullscreen biele pozadie</option>
+  </select>
+</div>
+<div class="bible">
+  Preklad:
+  <select bind:value={bibleid} on:change="{() => overlayBibleid.put(bibleid)}">
+    <option value="roh">Roháčkov</option>
+    <option value="seb">Ekumenický</option>
+  </select>
+  {#if loadingBible}Načítava sa biblia {bibleid}.{/if}
+</div>
