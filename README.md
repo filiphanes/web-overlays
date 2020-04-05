@@ -1,5 +1,5 @@
 # Gun Overlay
-Simple and powerfull remote controlled html pages useful for overlays in OBS Studio, Casper CD, XSplit, ProPresenter or simply fullscreen browser.
+Simple and powerfull remote controlled html pages useful for overlays in OBS Studio, Casper CD, XSplit or simply fullscreen browser.
 
 ## Features
 - server holds overlay state
@@ -41,6 +41,7 @@ Set it to the same IP address and port as your server is running on, (i.e. `http
 https://github.com/CasparCG/help/wiki/Media:-HTML-Templates
 
 ## ProPresenter
+ProPresenter browser capabilities in versions 6 and 7 are very limited, and this overlays are not usable.
 https://learn.renewedvision.com/propresenter6/the-features-of-propresenter/web-view
 
 ## XSplit
