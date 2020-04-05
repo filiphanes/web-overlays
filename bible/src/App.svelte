@@ -220,7 +220,7 @@
   {/each}
 </div>
 
-<div style="display: inline-block; margin: 0 .5rem 0 0;">
+<div style="display: inline-block; margin: 0 .5rem 0 0; vertical-align: top;">
   Kapitola: {selected.chapter}
   <Keypad bind:value={selected.chapter} max={Object.keys(shownBook.chapters).length} />
   <button class="control-button btn" on:click={toggleLine} class:btn-danger={shown} class:btn-success={!shown}>
@@ -228,12 +228,13 @@
   </button>
 </div>
 <div style="display: inline-block;">
-  Od verša: {selected.verse} do {selected.verse + selected.count - 1}
+  Verš: {selected.verse} {#if selected.count>1} - {selected.verse + selected.count - 1}{/if}
   <Keypad bind:value={selected.verse} max={bookLength} />
   <button class="btn btn-primary" on:click={function(){selected.count -= 1}}
           disabled={selected.count <= 1}>-1</button>
   <button class="btn btn-primary" on:click={function(){selected.count += 1}}
           disabled={selected.verse+selected.count > bookLength}>+1</button>
+  <br/>
   <button class="btn btn-primary" on:click={function(){selected.verse=Math.max(1,selected.verse-selected.count)}}
           disabled={selected.verse <= 1}>⇐</button>
   <button class="btn btn-primary" on:click={function(){selected.verse=Math.min(selected.verse+selected.count,bookLength-1)}}
