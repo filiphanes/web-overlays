@@ -678,7 +678,7 @@ var app = (function () {
     }
 
     // (227:4) {#if shown}
-    function create_if_block_1(ctx) {
+    function create_if_block_2(ctx) {
     	let t;
 
     	return {
@@ -694,7 +694,32 @@ var app = (function () {
     	};
     }
 
-    // (261:2) {#if loadingBible}
+    // (231:25) {#if selected.count>1}
+    function create_if_block_1(ctx) {
+    	let t0;
+    	let t1_value = /*selected*/ ctx[8].verse + /*selected*/ ctx[8].count - 1 + "";
+    	let t1;
+
+    	return {
+    		c() {
+    			t0 = text("- ");
+    			t1 = text(t1_value);
+    		},
+    		m(target, anchor) {
+    			insert(target, t0, anchor);
+    			insert(target, t1, anchor);
+    		},
+    		p(ctx, dirty) {
+    			if (dirty[0] & /*selected*/ 256 && t1_value !== (t1_value = /*selected*/ ctx[8].verse + /*selected*/ ctx[8].count - 1 + "")) set_data(t1, t1_value);
+    		},
+    		d(detaching) {
+    			if (detaching) detach(t0);
+    			if (detaching) detach(t1);
+    		}
+    	};
+    }
+
+    // (262:2) {#if loadingBible}
     function create_if_block(ctx) {
     	let t0;
     	let t1;
@@ -746,18 +771,18 @@ var app = (function () {
     	let t11_value = /*selected*/ ctx[8].verse + "";
     	let t11;
     	let t12;
-    	let t13_value = /*selected*/ ctx[8].verse + /*selected*/ ctx[8].count - 1 + "";
     	let t13;
-    	let t14;
     	let updating_value_1;
-    	let t15;
+    	let t14;
     	let button2;
-    	let t16;
+    	let t15;
     	let button2_disabled_value;
-    	let t17;
+    	let t16;
     	let button3;
-    	let t18;
+    	let t17;
     	let button3_disabled_value;
+    	let t18;
+    	let br0;
     	let t19;
     	let button4;
     	let t20;
@@ -772,7 +797,7 @@ var app = (function () {
     	let t25;
     	let span;
     	let t26;
-    	let br;
+    	let br1;
     	let t27;
     	let div6;
     	let t28;
@@ -819,12 +844,13 @@ var app = (function () {
     	binding_callbacks.push(() => bind(keypad0, "value", keypad0_value_binding));
 
     	function select_block_type(ctx, dirty) {
-    		if (/*shown*/ ctx[0]) return create_if_block_1;
+    		if (/*shown*/ ctx[0]) return create_if_block_2;
     		return create_else_block;
     	}
 
     	let current_block_type = select_block_type(ctx);
     	let if_block0 = current_block_type(ctx);
+    	let if_block1 = /*selected*/ ctx[8].count > 1 && create_if_block_1(ctx);
 
     	function keypad1_value_binding(value) {
     		/*keypad1_value_binding*/ ctx[33].call(null, value);
@@ -838,7 +864,7 @@ var app = (function () {
 
     	const keypad1 = new Keypad({ props: keypad1_props });
     	binding_callbacks.push(() => bind(keypad1, "value", keypad1_value_binding));
-    	let if_block1 = /*loadingBible*/ ctx[5] && create_if_block(ctx);
+    	let if_block2 = /*loadingBible*/ ctx[5] && create_if_block(ctx);
 
     	return {
     		c() {
@@ -872,18 +898,20 @@ var app = (function () {
     			if_block0.c();
     			t9 = space();
     			div4 = element("div");
-    			t10 = text("Od verša: ");
+    			t10 = text("Verš: ");
     			t11 = text(t11_value);
-    			t12 = text(" do ");
-    			t13 = text(t13_value);
-    			t14 = space();
+    			t12 = space();
+    			if (if_block1) if_block1.c();
+    			t13 = space();
     			create_component(keypad1.$$.fragment);
-    			t15 = space();
+    			t14 = space();
     			button2 = element("button");
-    			t16 = text("-1");
-    			t17 = space();
+    			t15 = text("-1");
+    			t16 = space();
     			button3 = element("button");
-    			t18 = text("+1");
+    			t17 = text("+1");
+    			t18 = space();
+    			br0 = element("br");
     			t19 = space();
     			button4 = element("button");
     			t20 = text("⇐");
@@ -896,7 +924,7 @@ var app = (function () {
     			t25 = space();
     			span = element("span");
     			t26 = space();
-    			br = element("br");
+    			br1 = element("br");
     			t27 = space();
     			div6 = element("div");
     			t28 = text("Téma:\n  ");
@@ -916,7 +944,7 @@ var app = (function () {
     			option4 = element("option");
     			option4.textContent = "Ekumenický";
     			t36 = space();
-    			if (if_block1) if_block1.c();
+    			if (if_block2) if_block2.c();
     			attr(input, "class", "form-control");
     			attr(input, "type", "text");
     			attr(input, "placeholder", "filter");
@@ -933,6 +961,7 @@ var app = (function () {
     			toggle_class(button1, "btn-success", !/*shown*/ ctx[0]);
     			set_style(div3, "display", "inline-block");
     			set_style(div3, "margin", "0 .5rem 0 0");
+    			set_style(div3, "vertical-align", "top");
     			attr(button2, "class", "btn btn-primary svelte-18toi3t");
     			button2.disabled = button2_disabled_value = /*selected*/ ctx[8].count <= 1;
     			attr(button3, "class", "btn btn-primary svelte-18toi3t");
@@ -995,15 +1024,17 @@ var app = (function () {
     			append(div4, t10);
     			append(div4, t11);
     			append(div4, t12);
+    			if (if_block1) if_block1.m(div4, null);
     			append(div4, t13);
-    			append(div4, t14);
     			mount_component(keypad1, div4, null);
-    			append(div4, t15);
+    			append(div4, t14);
     			append(div4, button2);
-    			append(button2, t16);
-    			append(div4, t17);
+    			append(button2, t15);
+    			append(div4, t16);
     			append(div4, button3);
-    			append(button3, t18);
+    			append(button3, t17);
+    			append(div4, t18);
+    			append(div4, br0);
     			append(div4, t19);
     			append(div4, button4);
     			append(button4, t20);
@@ -1017,7 +1048,7 @@ var app = (function () {
     			insert(target, span, anchor);
     			span.innerHTML = /*line2*/ ctx[2];
     			insert(target, t26, anchor);
-    			insert(target, br, anchor);
+    			insert(target, br1, anchor);
     			insert(target, t27, anchor);
     			insert(target, div6, anchor);
     			append(div6, t28);
@@ -1034,7 +1065,7 @@ var app = (function () {
     			append(select1, option4);
     			select_option(select1, /*bibleid*/ ctx[4]);
     			append(div7, t36);
-    			if (if_block1) if_block1.m(div7, null);
+    			if (if_block2) if_block2.m(div7, null);
     			current = true;
     			if (remount) run_all(dispose);
 
@@ -1134,7 +1165,20 @@ var app = (function () {
     			}
 
     			if ((!current || dirty[0] & /*selected*/ 256) && t11_value !== (t11_value = /*selected*/ ctx[8].verse + "")) set_data(t11, t11_value);
-    			if ((!current || dirty[0] & /*selected*/ 256) && t13_value !== (t13_value = /*selected*/ ctx[8].verse + /*selected*/ ctx[8].count - 1 + "")) set_data(t13, t13_value);
+
+    			if (/*selected*/ ctx[8].count > 1) {
+    				if (if_block1) {
+    					if_block1.p(ctx, dirty);
+    				} else {
+    					if_block1 = create_if_block_1(ctx);
+    					if_block1.c();
+    					if_block1.m(div4, t13);
+    				}
+    			} else if (if_block1) {
+    				if_block1.d(1);
+    				if_block1 = null;
+    			}
+
     			const keypad1_changes = {};
     			if (dirty[0] & /*bookLength*/ 4096) keypad1_changes.max = /*bookLength*/ ctx[12];
 
@@ -1173,16 +1217,16 @@ var app = (function () {
     			}
 
     			if (/*loadingBible*/ ctx[5]) {
-    				if (if_block1) {
-    					if_block1.p(ctx, dirty);
+    				if (if_block2) {
+    					if_block2.p(ctx, dirty);
     				} else {
-    					if_block1 = create_if_block(ctx);
-    					if_block1.c();
-    					if_block1.m(div7, null);
+    					if_block2 = create_if_block(ctx);
+    					if_block2.c();
+    					if_block2.m(div7, null);
     				}
-    			} else if (if_block1) {
-    				if_block1.d(1);
-    				if_block1 = null;
+    			} else if (if_block2) {
+    				if_block2.d(1);
+    				if_block2 = null;
     			}
     		},
     		i(local) {
@@ -1210,18 +1254,19 @@ var app = (function () {
     			if_block0.d();
     			if (detaching) detach(t9);
     			if (detaching) detach(div4);
+    			if (if_block1) if_block1.d();
     			destroy_component(keypad1);
     			if (detaching) detach(t23);
     			if (detaching) detach(div5);
     			if (detaching) detach(t25);
     			if (detaching) detach(span);
     			if (detaching) detach(t26);
-    			if (detaching) detach(br);
+    			if (detaching) detach(br1);
     			if (detaching) detach(t27);
     			if (detaching) detach(div6);
     			if (detaching) detach(t32);
     			if (detaching) detach(div7);
-    			if (if_block1) if_block1.d();
+    			if (if_block2) if_block2.d();
     			run_all(dispose);
     		}
     	};
