@@ -1,0 +1,20 @@
+{
+  "name": "gun-overlay-songs",
+  "version": "1.0.0",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^11.0.2",
+    "@rollup/plugin-json": "^4.0.2",
+    "@rollup/plugin-node-resolve": "^7.1.1",
+    "rollup": "^2.3.2",
+    "rollup-plugin-svelte": "^5.2.0",
+    "sirv-cli": "^0.4.5",
+    "svelte": "^3.20.1"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "autobuild": "rollup -c -w",
+    "dev": "run-p start:dev autobuild",
+    "start": "sirv .",
+    "start:dev": "sirv . --dev"
+  }
+}
