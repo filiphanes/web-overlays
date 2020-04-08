@@ -1,64 +1,45 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import Keypad from "./Keypad.svelte";
-
-  /* Synced variables */
-  let shown = false;
-  let line1 = '';
-  let line2 = '';
-  let bodyclass = '';
-  let bibleid = 'roh';
+  import { writableGun } from './gunstores.js';
   
   let loadingBible;
 
+  let defaultAddress = {book: "gn", chapter: 1, verse: 1, count: 1};
   let books = [];
   let booksByAbbr = new Map();
 
   let bookFilter = "";
   let shownBook;
-
-  let selected = {
-    book: "gn",
-    chapter: 1,
-    verse: 1,
-    count: 1
-  }
-  let shownAddress = selected;
-
   let lastAddresses = [
-    {book: "gn", chapter: 1, verse: 1, count: 1},
+    defaultAddress,
   ];
 
   GUN_SUPER_PEERS = GUN_SUPER_PEERS || ['http://127.0.0.1/gun'];
   let gun = Gun(GUN_SUPER_PEERS);
   let overlay = gun.get('bible').get(window.location.hash || 'demo');
-  overlay.get('show').on(function(data, key){shown = data});
-  let overlayAddress = overlay.get('address');
-  overlayAddress.map().on(function(data, key){shownAddress[key] = data});
-  let overlayLine1 = overlay.get('line1');
-  overlayLine1.on(function(data){line1 = data});
-  let overlayLine2 = overlay.get('line2');
-  overlayLine2.on(function(data){line2 = data});
-  let overlayBodyClass = overlay.get('bodyclass');
-  overlayBodyClass.on(function(data){bodyclass = data});
-  let overlayBibleid = overlay.get('bibleid');
-  overlayBibleid.on(function(data){bibleid = data});
 
-  $: loadBible(bibleid + '.json');
-  $: shownBook = booksByAbbr[shownAddress.book] || {chapters:[], name: ""};
-  $: selected.count = selected.verse ? selected.count : 1;
-  $: overlayAddress.put(selected);
-  $: overlayLine1.put(addressAsString(selected));
-  $: overlayLine2.put(addressContent(selected));
+  /* Synced variables */
+  let shown = writableGun(overlay.get('show'), false);
+  let line1 = writableGun(overlay.get('line1'), '');
+  let line2 = writableGun(overlay.get('line2'), '');
+  let address = writableGun(overlay.get('address'), defaultAddress);
+  let bodyclass = writableGun(overlay.get('bodyclass'), '');
+  let bibleid = writableGun(overlay.get('bibleid'), 'roh');
+
+  $: loadBible($bibleid + '.json');
+  $: shownBook = booksByAbbr[$address.book] || {chapters:[], name: ""};
+  $: $address.count = $address.verse ? $address.count : 1;
+  $: $line1 = addressAsString($address);
+  $: $line2 = addressContent($address);
   $: filteredBooks = bookFilter ? books.filter(matchesBook) : books;
-  $: bookLength = (shownBook.chapters[selected.chapter]||[]).length;
+  $: bookLength = (shownBook.chapters[$address.chapter]||[]).length;
 
   /* Disabled last address filtering
   $: filteredLastAddresses = bookFilter
     ? lastAddresses.filter(h => matchesBook(booksByAbbr[h.book]))
     : lastAddresses;
   */
-
 
   function loadBible(path) {
     loadingBible = true;
@@ -69,10 +50,10 @@
     request.send();
     request.onload = function() {
       books = request.response.books;
-      books.forEach(book => {booksByAbbr[book.abbreviation] = book});
+      books && books.forEach(book => {booksByAbbr[book.abbreviation] = book});
       /* Redraw */
       lastAddresses = lastAddresses;
-      selected = selected;
+      // $address = $address;
       loadingBible = false;
     }
   }
@@ -110,12 +91,12 @@
     return s;
   }
 
-  function addressContent(address){
-    var book = booksByAbbr[shownAddress.book];
+  function addressContent(a){
+    var book = booksByAbbr[a.book];
     var content = '';
-    if (book && selected.verse && book.chapters[selected.chapter]) {
-      for (var i=selected.verse; i < selected.verse+selected.count; i++) {
-        content += '\n' + (book.chapters[selected.chapter][i-1] || '');
+    if (book && $address.verse && book.chapters[$address.chapter]) {
+      for (var i=$address.verse; i < $address.verse+$address.count; i++) {
+        content += '\n' + (book.chapters[$address.chapter][i-1] || '');
       }
     }
     return content;
@@ -128,11 +109,11 @@
             a.count == b.count;
   }
 
-  function addressSelector(address) {
-    address.chapter = address.chapter || '';
-    address.verse = address.verse || '';
-    address.count = address.count || 1;
-    return function() {selected = address};
+  function addressSelector(a) {
+    a.chapter = a.chapter || '';
+    a.verse = a.verse || '';
+    a.count = a.count || 1;
+    return function() {$address = a};
   }
 
   function removeLastAddress(j) {
@@ -142,10 +123,9 @@
   }
 
   function toggleLine() {
-    shown = !shown;
-    overlay.get('show').put(shown);
-    if (shown) {
-      addToLastAddresses(selected);
+    $shown = !$shown;
+    if ($shown) {
+      addToLastAddresses($address);
     }
   }
 </script>
@@ -168,18 +148,19 @@
   }
   .book-item {
     width: 100%;
-    margin: 0 0 .25rem 0;
-    padding: 0 .5rem;
+    margin: 0;
+    padding: .5rem;
     text-align: left;
   }
   .address-item {
     width: 100%;
-    margin: 0 0 .25rem 0;
+    padding: 0;
+    margin: 0;
     max-width: 30rem;
   }
   .address-set {
     width: auto;
-    padding: 0 .5rem;
+    padding: .5rem;
     margin: 0;
     text-align: left;
   }
@@ -187,6 +168,7 @@
     margin: 0;
     max-width: 2rem;
     padding: .25rem .5rem;
+    line-height: 1rem;
   }
   .vers,
   .address {
@@ -196,8 +178,8 @@
     color: white;
   }
   button {
-    margin: 0;
-    line-height: 2rem;
+    margin: 0 0 .25rem 0;
+    line-height: 1rem;
     width: 2.8rem;
   }
 </style>
@@ -208,56 +190,65 @@
 </div>
 <div class="books-filter">
   {#each filteredBooks as book}
-  <button class="book-item btn" class:btn-primary={book.abbreviation==shownAddress.book} on:click={addressSelector({book: book.abbreviation})}>{book.name}</button>
+  <button class="book-item btn" class:btn-primary={book.abbreviation==$address.book} on:click={addressSelector({book: book.abbreviation})}>{book.name}</button>
   {/each}
 </div>
 <div class="address-filter">
-  {#each lastAddresses as address, i}
+  {#each lastAddresses as addr, i}
   <div class="address-item btn-group">
-    <button class="address-set btn" class:btn-primary={equalAddresses(address, shownAddress)} on:click={addressSelector(address)}>{addressAsString(address) || (address.book+' '+address.chapter+','+address.verse)}</button>
-    <button class="btn address-remove" on:click={removeLastAddress(i)}>×</button>
+    <button class="address-set btn" class:btn-primary={equalAddresses(addr, $address)} on:click={addressSelector(addr)}>{addressAsString(addr) || (addr.book+' '+addr.chapter+','+addr.verse)}</button>
+    <button class="btn btn-secondary address-remove" on:click={removeLastAddress(i)}>×</button>
   </div>
   {/each}
 </div>
 
 <div style="display: inline-block; margin: 0 .5rem 0 0; vertical-align: top;">
-  Kapitola: {selected.chapter}
-  <Keypad bind:value={selected.chapter} max={Object.keys(shownBook.chapters).length} />
-  <button class="control-button btn" on:click={toggleLine} class:btn-danger={shown} class:btn-success={!shown}>
-    {#if shown}Skryť{:else}Zobraziť{/if}
+  Kapitola: {$address.chapter}
+  <Keypad bind:value={$address.chapter} max={Object.keys(shownBook.chapters).length} />
+  <button class="control-button btn"
+          style="line-height: 2rem;"
+          on:click={toggleLine} class:btn-danger={$shown} class:btn-success={!$shown}>
+    {#if $shown}Skryť{:else}Zobraziť{/if}
   </button>
 </div>
 <div style="display: inline-block;">
-  Verš: {selected.verse} {#if selected.count>1} - {selected.verse + selected.count - 1}{/if}
-  <Keypad bind:value={selected.verse} max={bookLength} />
-  <button class="btn btn-primary" on:click={function(){selected.count -= 1}}
-          disabled={selected.count <= 1}>-1</button>
-  <button class="btn btn-primary" on:click={function(){selected.count += 1}}
-          disabled={selected.verse+selected.count > bookLength}>+1</button>
+  Verš: {$address.verse} {#if $address.count>1} - {$address.verse + $address.count - 1}{/if}
+  <Keypad bind:value={$address.verse} max={bookLength} />
+  <button class="btn btn-primary" on:click={function(){$address.count -= 1}}
+          style="line-height: 2rem;"
+          disabled={$address.count <= 1}>-1</button>
+  <button class="btn btn-primary" on:click={function(){$address.count += 1}}
+          style="line-height: 2rem;"
+          disabled={$address.verse+$address.count > bookLength}>+1</button>
   <br/>
-  <button class="btn btn-primary" on:click={function(){selected.verse=Math.max(1,selected.verse-selected.count)}}
-          disabled={selected.verse <= 1}>⇐</button>
-  <button class="btn btn-primary" on:click={function(){selected.verse=Math.min(selected.verse+selected.count,bookLength-1)}}
-          disabled={selected.verse+selected.count > bookLength}>⇒</button>
+  <button class="btn btn-primary"
+          style="line-height: 2rem;"
+          on:click={function(){$address.verse=Math.max(1,$address.verse-$address.count)}}
+          disabled={$address.verse <= 1}>⇐</button>
+  <button class="btn btn-primary"
+          style="line-height: 2rem;"
+          on:click={function(){$address.verse=Math.min($address.verse+$address.count,bookLength-1)}}
+          disabled={$address.verse+$address.count > bookLength}>⇒</button>
 </div>
 
-<div class="address">{line1}</div>
-<span class="vers">{@html line2}</span>
+<div class="address">{$line1}</div>
+<span class="vers" style="margin-bottom: 1rem;">{@html $line2}</span>
 
 <br/>
 <div class="bodyclass">
   Téma:
-  <select bind:value={bodyclass} on:change="{() => overlayBodyClass.put(bodyclass)}">
+  <select bind:value={$bodyclass}>
     <option value="" selected>Predvolené</option>
     <option value="simple-with-shadow" selected>Jednoduché s tieňom</option>
     <option value="fullscreen-white-bg">Fullscreen biele pozadie</option>
   </select>
 </div>
+
 <div class="bible">
-  Preklad:
-  <select bind:value={bibleid} on:change="{() => overlayBibleid.put(bibleid)}">
+  Biblia:
+  <select bind:value={$bibleid}>
     <option value="roh">Roháčkov</option>
     <option value="seb">Ekumenický</option>
   </select>
-  {#if loadingBible}Načítava sa biblia {bibleid}.{/if}
+  {#if loadingBible}Načítava sa biblia {$bibleid}.{/if}
 </div>
