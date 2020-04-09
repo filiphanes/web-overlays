@@ -1,9 +1,18 @@
 <script>
+  /* TODO: openlp importer */
+  /* TODO: stage view overlay */
   import { onMount, onDestroy } from "svelte";
   import { writableGun } from './gunstores.js';
 
   onMount(function(){
     document.addEventListener('keydown', function(event) {
+      if (editingSong) {
+        if (event.code == 'Enter' &&
+            event.getModifierState("Control") +
+            event.getModifierState("Meta") > 1) {
+              addNewVerse();
+            }
+      };
       if (event.code == 'ArrowDown' || event.code == 'ArrowUp'
        || event.code == 'ArrowLeft' || event.code == 'ArrowRight'
       ) event.preventDefault();
@@ -41,6 +50,7 @@ A word shall quickly slay him.`
   let songFilter = "";
   let filteredSongs = songs;
   let filterFocused = false;
+  let editingSong = false;
 
   GUN_SUPER_PEERS = GUN_SUPER_PEERS || ['http://127.0.0.1/gun'];
   let gun = Gun(GUN_SUPER_PEERS);
@@ -58,19 +68,26 @@ A word shall quickly slay him.`
   ];
   let curSong = playlist[0];
   let curVerses = curSong.verses || [];
+  let newId = 's1'; generateNewId();
+  let newVerse = '';
 
-  $: curSong = playlist[$curSongIndex || 0];
+  $: if ($curSongIndex >= playlist.length) $curSongIndex = playlist.length-1;
+  $: curSong = playlist[$curSongIndex];
   $: curVerses = getSongVerses(curSong);
   $: $line1 = curVerses[$curVerseIndex];
   $: filteredSongs = songFilter ? songs.filter(matchesSong) : songs;
 
   function getSongVerses(song) {
     let verses = [];
-    song && song.order.split(' ').forEach(id => {
-      if (song.verses[id]) {
-        verses.push(song.verses[id]);
+    if (song) {
+      if (song.order.trim()) {
+        song.order.split(' ').forEach(id => {
+          if (song.verses[id]) verses.push(song.verses[id]);
+        });
+      } else {
+        return Object.values(song.verses)
       }
-    });
+    }
     return verses;
   }
 
@@ -101,6 +118,39 @@ A word shall quickly slay him.`
   function verseSelector(i) {
     return function() {$curVerseIndex = i}
   }
+  function verseRemover(id) {
+    return function() {
+      if (!newVerse) newId = id;
+      delete curSong.verses[id]
+    };
+  }
+  function addNewVerse() {
+    if (newId && !curSong.verses[newId])
+      curSong.verses[newId] = newVerse;
+    /* Clean new verse */
+    newVerse = '';
+    generateNewId();
+  }
+  function generateNewId() {
+    if (!curSong || !curSong.verses) return;
+    while (curSong.verses[newId]) {
+      newId = newId.replace(/\d+/, (n)=>(parseInt(n)+1))
+    }
+  }
+
+  function addSong() {
+    let newSong = {
+      name: '',
+      author: '',
+      order: '',
+      verses: {}
+    }
+    songs.push(newSong);
+    addToPlaylist(newSong);
+    $curSongIndex = playlist.length - 1;
+    editingSong = true;
+    newId = 's1';
+  }
 
   function scrollToVerse(i) {
     let e = document.querySelector('.verse-item:nth-child('+i+')');
@@ -116,9 +166,6 @@ A word shall quickly slay him.`
 <style>
   :global(body) {
     color: white;
-  }
-  .control-button {
-    width: 6rem;
   }
   .songs-filter {
     display: block;
@@ -166,12 +213,14 @@ A word shall quickly slay him.`
     max-width: 2rem;
     padding: .25rem .5rem;
   }
+  .song-add {
+    float:right
+  }
 
   .verses {
     display: inline-block;
     overflow: auto;
     width: 100%;
-    /* max-height: calc(100vh - 5.6rem); */
   }
   .verse-item {
     border-bottom: 1px solid;
@@ -191,15 +240,46 @@ A word shall quickly slay him.`
   .verse-item:last-child {
     border-bottom: none;
   }
-  button {
-    margin: 0;
-    padding: 1rem 0.25rem;
+  p[contenteditable="true"] {
+    background-color: white;
+    color: black;
+    min-height: 3rem;
+    max-width: calc(100% - 4rem);
+    padding: .5rem .5rem;
+    white-space: pre;
   }
-  .bottom-buttons {
+  p[contenteditable="true"]:focus-within {
+    background-color: lightyellow;
+  }
+  .verse-id {
+    float: right;
+    padding: .5rem;
+  }
+  .verse-new-id {
+    float: right;
+    padding: 0 0 0 .25rem;
+    width: 1.8rem;
+  }
+  .verse-new-item {
+    min-height: 3rem;
+  }
+  .verse-add {
+    float: right;
+  }
+  .verse-remove {
+    float: right;
+    padding: .5rem 0.75rem;
+  }
+
+.bottom-buttons {
     position: sticky;
     bottom: 0;
     left: 0;
     width: 100%;
+  }
+  .bottom-buttons button {
+    margin: 0;
+    padding: 1rem 0.25rem;
   }
 </style>
 
@@ -238,19 +318,37 @@ A word shall quickly slay him.`
     <button class="song-set btn"
       class:btn-primary={$curSongIndex==i}
       on:click={songSelector(i)}
-      >{song.name||'--'}</button>
+    >{song.name||'---'}</button>
     <button class="btn btn-secondary song-remove" on:click={playlistRemover(i)}>×</button>
   </div>
   {/each}
 </div>
 
 <div class="verses">
-  Verše:
-  {#each curVerses as verse, i}
+  <span>{curSong.name}</span> - <span>{curSong.author}</span>
+  <button class="song-edit btn" class:btn-danger={editingSong}
+          on:click={()=>{editingSong = !editingSong; generateNewId();}}>✎</button>
+  <button class="song-add btn" on:click={addSong}>+</button>
+
+  {#if editingSong}
+    <input class="form-control" type="text" placeholder="name" bind:value={curSong.name} />
+    <input class="form-control" type="text" placeholder="author" bind:value={curSong.author} />
+    <input class="form-control" type="text" placeholder="order" bind:value={curSong.order} />
+    {#each Object.entries(curSong.verses) as [id, verse]}
+    <button class="verse-remove btn btn-secondary" on:click={()=>{verseRemover(id)}}>×</button>
+    <span class="verse-id">{id}</span>
+    <p class="verse-item" contenteditable="true" bind:innerHTML={curSong.verses[id]}></p>
+    {/each}
+    <button class="verse-add btn btn-success" on:click={addNewVerse}>+</button>
+    <input class="form-control verse-new-id" type="text" placeholder="id" bind:value={newId} />
+    <p class="verse-new-item" contenteditable="true" bind:innerHTML={newVerse}></p>
+  {:else}
+    {#each curVerses as verse, i}
     <p class="verse-item" class:active={$curVerseIndex==i} on:click={verseSelector(i)}>
-    {@html verse.replace(/\n/g,'<br>')}
+      {@html verse.replace(/\n/g,'<br>')}
     </p>
-  {/each}
+    {/each}
+  {/if}
 </div>
 
 <div class="bottom-buttons btn-group">
