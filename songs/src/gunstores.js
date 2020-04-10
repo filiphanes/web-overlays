@@ -12,7 +12,7 @@ function writableGun(gunData, value) {
             gunData.put(value);
         }
         gunData.on((data, key) => {
-            console.debug(key, data);
+            // console.debug(key, data);
             store.set(data)
         });
     });

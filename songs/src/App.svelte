@@ -1,56 +1,48 @@
 <script>
-  /* TODO: openlp importer */
   /* TODO: stage view overlay */
   import { onMount, onDestroy } from "svelte";
+  import { writable } from 'svelte/store'
   import { writableGun } from './gunstores.js';
 
   onMount(function(){
     document.addEventListener('keydown', function(event) {
       if (editingSong) {
-        if (event.code == 'Enter' &&
-            event.getModifierState("Control") +
-            event.getModifierState("Meta") > 1) {
-              addNewVerse();
-            }
+        if (event.code == 'Enter' && event.getModifierState("Control")){
+          addNewVerse();
+        }
+        return;
       };
-      if (event.code == 'ArrowDown' || event.code == 'ArrowUp'
-       || event.code == 'ArrowLeft' || event.code == 'ArrowRight'
-      ) event.preventDefault();
 
       if (event.code == 'ArrowDown') {
         $curVerseIndex = Math.min($curVerseIndex+1, curVerses.length-1);
-        scrollToVerse($curVerseIndex);
       } else if (event.code == 'ArrowUp') {
         $curVerseIndex = Math.max($curVerseIndex-1, 0);
-        scrollToVerse($curVerseIndex);
       } else if (event.code == 'ArrowLeft') {
         $curSongIndex = Math.max($curSongIndex-1, 0);
+        $curVerseIndex = 0;
       } else if (event.code == 'ArrowRight') {
         $curSongIndex = Math.min($curSongIndex+1, playlist.length-1);
+        $curVerseIndex = 0;
       }
-    });
+
+      if (event.code == 'ArrowDown' || event.code == 'ArrowUp'
+       || event.code == 'ArrowLeft' || event.code == 'ArrowRight'
+      ) {
+        event.preventDefault();
+        scrollToVerse($curVerseIndex);
+      }
+});
   });
 
-  let songs = [
-    {
-      name: "A Safe Stronghold Our God is Still",
-      author: "Martin Luther",
-      order: "s1 s2 s3 s1 s1 s2 s3 s3 s3",
-      verses: {
-        s1: `As safe a stronghold our God is still,
-On earth is not His fellow.`,
-        s2: `With force of arms we nothing can,
-Shall conquer in the battle.`,
-        s3: `And were this world all devils o’er,
-A word shall quickly slay him.`
-      }
-    }
-  ];
-  let songsByName = new Map();
+  let songs = {};
+  let songsSorted = [];
+
   let songFilter = "";
-  let filteredSongs = songs;
-  let filterFocused = false;
-  let editingSong = false;
+  let songsFiltered = songsSorted;
+  let filterOpen = false;
+  let editing = false;
+  let editingSong;
+  let playlist = [];
 
   GUN_SUPER_PEERS = GUN_SUPER_PEERS || ['http://127.0.0.1/gun'];
   let gun = Gun(GUN_SUPER_PEERS);
@@ -62,94 +54,148 @@ A word shall quickly slay him.`
   let bodyclass = writableGun(overlay.get('bodyclass'), '');
   let curSongIndex = writableGun(overlay.get('curSongIndex'), 0);
   let curVerseIndex = writableGun(overlay.get('curVerseIndex'), 0);
-
-  let playlist = [
-    songs[0],
-  ];
-  let curSong = playlist[0];
-  let curVerses = curSong.verses || [];
-  let newId = 's1'; generateNewId();
-  let newVerse = '';
-
-  $: if ($curSongIndex >= playlist.length) $curSongIndex = playlist.length-1;
-  $: curSong = playlist[$curSongIndex];
-  $: curVerses = getSongVerses(curSong);
-  $: $line1 = curVerses[$curVerseIndex];
-  $: filteredSongs = songFilter ? songs.filter(matchesSong) : songs;
-
-  function getSongVerses(song) {
-    let verses = [];
-    if (song) {
-      if (song.order.trim()) {
-        song.order.split(' ').forEach(id => {
-          if (song.verses[id]) verses.push(song.verses[id]);
-        });
-      } else {
-        return Object.values(song.verses)
+  let songsGun = overlay.get('songs');
+  function refreshSongsDb() {
+    songsGun.map().once(function(data, key) {
+      // console.log('songs', key, data);
+      // data && songsGun.get(key).put(null); // clear songs
+      if (data === null) delete songs[key];
+      else songs[key] = data;
+    });
+  };
+  refreshSongsDb();
+  let playlistGun = overlay.get('playlist');
+  playlistGun.once(function(data) {
+    // console.log('once playlist', data);
+    // Cleanup playlist, remove holes
+    if (data) {
+      let pl = Object.entries(data).filter(a=>(a[1] && a[0] !== '_')).sort((a, b) => a[0] - b[0]).map(a=>a[1]);
+      // console.log('once pl', pl);
+      for (let i=0; data[i] !== undefined; i++) {
+        if (data[i] != pl[i]) {
+          // console.log('putting to', i, pl[i]);
+          playlistGun.get(i).put(pl[i] || null);
+        }
       }
     }
-    return verses;
+    // Subscribe to updates
+    playlistGun.map().on(function(data, key) {
+      // console.log('on playlist', key, data);
+      // data && playlistGun.get(key).put(null); // clear playlist
+      if (data === null) playlist = playlist.filter((song, i) => i != key);
+      else playlist[key] = data;
+    });
+  });
+
+  let curSong = {title:'', author:'', order:'', verses:{}};
+  let curVerses = [];
+  let newId = 's1';
+  let newVerse = '';
+
+  $: curSong = playlist[$curSongIndex] || {title:'', author:'', order:'', verses:{}};
+  $: setCurVerses(curSong);
+  $: $line1 = curVerses[$curVerseIndex] || '';
+  $: songsSorted = Object.values(songs).sort((a,b)=>(a.title.toLowerCase() > b.title.toLowerCase()));
+  $: songsFiltered = songFilter ? songsSorted.filter(matchesSong) : songsSorted;
+  
+  function setCurVerses(song) {
+    if (song) {
+      songsGun.get(Gun.node.soul(song)).get('verses')
+      .once(function(songVerses){
+        if (!songVerses) {
+          curVerses = [];
+        } else if (song.order.trim()) {
+          let verses = [];
+          song.order.split(' ').forEach(id => {
+            if (songVerses[id]) verses.push(songVerses[id]);
+          });
+          curVerses = verses;
+        } else {
+          curVerses = Object.values(songVerses).filter(v=>(v !== null && typeof v !== 'object'));
+        }
+      })
+    }
   }
 
   function matchesSong(song) {
     const prefix = songFilter.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    const nameLower = song.name.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const titleLower = song.title.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
     return (
-      nameLower.startsWith(prefix) ||
-      (prefix.length >= 2 && nameLower.includes(' '+prefix))
+      titleLower.startsWith(prefix) ||
+      (prefix.length >= 2 && titleLower.includes(' '+prefix))
     );
   }
 
   function addToPlaylist(song) {
-    playlist.push(song);
-    playlist = playlist;
+    console.log('adding to playlist', playlist.length, song);
+    playlistGun.get(playlist.length).put(song);
   }
 
-  function playlistRemover(songIndex) {
-    return function() {
-      playlist = playlist.filter((h, j) => (songIndex !== j));
+  function removePlaylistItem(i) {
+    if (i < $curSongIndex) $curSongIndex -= 1;
+    /* Keep playlist clean */
+    while(playlist[++i]) {
+      playlistGun.get(i-1).put(playlist[i]);
+    }
+    playlistGun.get(i-1).put(null);
+  }
+
+  function addNewSong() {
+    editingSong = {title: '', author: '', order: '', verses: {}};
+    newId = 'v1';
+    editing = true;
+  }
+
+  function removeSong(song) {
+    songsGun.get(Gun.node.soul(song)).put(null);
+    refreshSongsDb();
+  }
+
+  function toggleEdit(song) {
+    if (editing) {
+      editing = false;
+      let soul = Gun.node.soul(editingSong);
+      if (soul) {
+        songsGun.get(soul).put(editingSong);
+      } else {
+        console.log('New song', editingSong);
+        songsGun.set(editingSong);
+        refreshSongsDb();
+      }
+    } else {
+      editingSong = song;
+      songsGun.get(Gun.node.soul(song))
+        .get('verses')
+        .once(verses => {
+          editingSong.verses = verses;
+          generateNewId();
+          editing = true;
+        });
     }
   }
 
-  function songSelector(i) {
-    return function() {$curSongIndex = i}
+  function removeVerse(id) {
+    if (!newVerse) newId = id;
+    editingSong.verses[id] = null;
   }
-
-  function verseSelector(i) {
-    return function() {$curVerseIndex = i}
-  }
-  function verseRemover(id) {
-    return function() {
-      if (!newVerse) newId = id;
-      delete curSong.verses[id]
-    };
-  }
+  
   function addNewVerse() {
-    if (newId && !curSong.verses[newId])
-      curSong.verses[newId] = newVerse;
+    if (!editingSong.verses) editingSong.verses = {};
+    if (newId && !editingSong.verses[newId])
+      editingSong.verses[newId] = newVerse;
     /* Clean new verse */
     newVerse = '';
     generateNewId();
   }
-  function generateNewId() {
-    if (!curSong || !curSong.verses) return;
-    while (curSong.verses[newId]) {
-      newId = newId.replace(/\d+/, (n)=>(parseInt(n)+1))
-    }
-  }
 
-  function addSong() {
-    let newSong = {
-      name: '',
-      author: '',
-      order: '',
-      verses: {}
+  function generateNewId() {
+    if (editingSong.verses) {
+      while (editingSong.verses[newId]) {
+        let newId2 = newId.replace(/\d+/, (n)=>(parseInt(n)+1));
+        if (newId === newId2) newId += '1';
+        else newId = newId2;
+      }
     }
-    songs.push(newSong);
-    addToPlaylist(newSong);
-    $curSongIndex = playlist.length - 1;
-    editingSong = true;
-    newId = 's1';
   }
 
   function scrollToVerse(i) {
@@ -160,6 +206,35 @@ A word shall quickly slay him.`
   function toggleShow() {
     shown = !shown;
     overlay.get('show').put(shown);
+  }
+
+  function importSongs() {
+    let files = document.getElementById('songsUpload').files;
+    for (let i = 0; i < files.length; i++) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        let parser = new DOMParser();
+        let dom = parser.parseFromString(e.target.result, "application/xml");
+        if(dom.documentElement.nodeName == "parsererror") {
+          console.log(dom);
+          return;
+        }
+        let title = dom.querySelector('song properties title');
+        let author = dom.querySelector('song properties author');
+        let verseOrder = dom.querySelector('song properties verseOrder');
+        let song = {
+          title: title ? title.innerHTML : '',
+          author: author ? author.innerHTML : '',
+          order: verseOrder ? verseOrder.innerHTML : '',
+          verses: {},
+        };
+        dom.querySelectorAll('song lyrics verse').forEach(function(verse){
+          song.verses[verse.getAttribute('name')] = verse.querySelector('lines').innerHTML.replace(/<br[^>]*>/g, '\n');
+        });
+        songsGun.set(song);
+      };
+      reader.readAsText(files[i]);
+    }
   }
 </script>
 
@@ -181,8 +256,14 @@ A word shall quickly slay him.`
   .songs-filter.show {
     left: 0;
   }
-  .songs-filter .song-item {
-    padding: .75rem .5rem;
+  .songs-filter .song-add {
+    max-width: 3rem;
+  }
+  .songs-filter .song-edit {
+    max-width: 2rem;
+  }
+  .songs-filter .song-remove {
+    max-width: 2rem;
   }
 
   .song-item {
@@ -190,10 +271,11 @@ A word shall quickly slay him.`
     margin: 0;
     padding: 0;
     text-align: left;
-    border: 1px solid black;
+    border-bottom: 1px solid #555;
+    background-color: #222;
   }
   .song-item:hover {
-    border: 1px solid blue;
+    border-color: #9d7108;
   }
   .playlist {
     display: inline-block;
@@ -202,13 +284,13 @@ A word shall quickly slay him.`
     width: 100%;
     margin: 1rem 0;
   }
-  .song-set {
+  .playlist .song-set {
     width: auto;
     padding: 0 .75rem;
     margin: 0;
     text-align: left;
   }
-  .song-remove {
+  .playlist .song-remove {
     margin: 0;
     max-width: 2rem;
     padding: .25rem .5rem;
@@ -228,6 +310,7 @@ A word shall quickly slay him.`
     padding: .5rem .5rem;
     margin: 0;
     width: 100%;
+    white-space: pre;
   }
   .verse-item:hover {
     border-color: wheat;
@@ -271,7 +354,7 @@ A word shall quickly slay him.`
     padding: .5rem 0.75rem;
   }
 
-.bottom-buttons {
+  .bottom-buttons {
     position: sticky;
     bottom: 0;
     left: 0;
@@ -289,12 +372,14 @@ A word shall quickly slay him.`
     <option value="" selected>Predvolené</option>
     <option value="simple-with-shadow">Jednoduché s tieňom</option>
   </select>
+  Import: <input id="songsUpload" type="file" name="files" multiple on:change={importSongs}>
 </p>
 
 <div class="input-group" style="width: 100%; display: flex;">
   <input class="form-control" type="text" placeholder="filter"
     bind:value={songFilter}
-    on:focus={()=>{filterFocused=true}}
+    on:input={()=>{filterOpen = true;}}
+    on:click={()=>{filterOpen = !filterOpen;}}
     />
   <button type="button" class="form-control btn btn-secondary"
     style="max-width: 2rem; padding: .25rem;"
@@ -302,12 +387,17 @@ A word shall quickly slay him.`
     >×</button>
 </div>
 
-<div class="songs-filter" class:show={filterFocused}>
-  {#each filteredSongs as song}
-    <button class="song-item btn"
+<div class="songs-filter" class:show={filterOpen}>
+  {#each songsFiltered as song}
+  <div class="song-item btn-group">
+    <button class="song-set btn"
       class:btn-primary={song==curSong}
-      on:click={()=>{addToPlaylist(song); filterFocused=false}}
-    >{song.name}</button>
+      on:click={()=>{addToPlaylist(song); filterOpen=false}}
+    >{song.title}</button>
+    <button class="song-add btn btn-success" on:click={()=>addToPlaylist(song)}>+</button>
+    <button class="song-edit btn btn-secondary" on:click={()=>{toggleEdit(song); filterOpen=false}}>✎</button>
+    <button class="song-remove btn btn-secondary" on:click={()=>removeSong(song)}>🗑</button>
+  </div>
   {/each}
 </div>
 
@@ -317,37 +407,46 @@ A word shall quickly slay him.`
   <div class="song-item btn-group">
     <button class="song-set btn"
       class:btn-primary={$curSongIndex==i}
-      on:click={songSelector(i)}
-    >{song.name||'---'}</button>
-    <button class="btn btn-secondary song-remove" on:click={playlistRemover(i)}>×</button>
+      on:click={()=>{$curSongIndex = i}}
+    >{i+1}. {song.title}</button>
+    <button class="song-remove btn btn-secondary" on:click={()=>removePlaylistItem(i)}>×</button>
   </div>
   {/each}
 </div>
 
+<div class="info-bar">
+  <button class="song-edit btn" class:btn-success={editing} on:click={()=>toggleEdit(curSong)}>
+    ✎{#if editing} Uložiť{/if}
+  </button>
+  <button class="song-add btn" on:click={addNewSong}>+</button>
+  {#if editing}
+    <button class="song-cancel btn btn-secondary" on:click={()=>{editing=false}}>× Zrušiť</button>
+    <button class="song-remove btn btn-danger" on:click={()=>{editing=false; removeSong(editingSong)}}>🗑 Odstrániť</button>
+    <input class="form-control" type="text" placeholder="title" bind:value={editingSong.title} />
+    <input class="form-control" type="text" placeholder="author" bind:value={editingSong.author} />
+    <input class="form-control" type="text" placeholder="order" bind:value={editingSong.order} />
+  {:else}
+    <span>{curSong.title}</span> - <span>{curSong.author}</span>
+  {/if}
+</div>
 <div class="verses">
-  <span>{curSong.name}</span> - <span>{curSong.author}</span>
-  <button class="song-edit btn" class:btn-danger={editingSong}
-          on:click={()=>{editingSong = !editingSong; generateNewId();}}>✎</button>
-  <button class="song-add btn" on:click={addSong}>+</button>
-
-  {#if editingSong}
-    <input class="form-control" type="text" placeholder="name" bind:value={curSong.name} />
-    <input class="form-control" type="text" placeholder="author" bind:value={curSong.author} />
-    <input class="form-control" type="text" placeholder="order" bind:value={curSong.order} />
-    {#each Object.entries(curSong.verses) as [id, verse]}
-    <button class="verse-remove btn btn-secondary" on:click={()=>{verseRemover(id)}}>×</button>
+  {#if editing}
+    {#each Object.entries(editingSong.verses||{}).filter(e=>typeof e[1] != 'object' && e[1] != null) as [id, verse]}
+    <button class="verse-remove btn btn-secondary" on:click={()=>removeVerse(id)}>×</button>
     <span class="verse-id">{id}</span>
-    <p class="verse-item" contenteditable="true" bind:innerHTML={curSong.verses[id]}></p>
+    <p class="verse-item" contenteditable="true" bind:innerHTML={editingSong.verses[id]}></p>
     {/each}
+  {:else}
+    {#each curVerses as verse, i}
+    <p class="verse-item" class:active={$curVerseIndex==i} on:click={()=>{$curVerseIndex = i}}>
+      {verse}
+    </p>
+    {/each}
+  {/if}
+  {#if editing}
     <button class="verse-add btn btn-success" on:click={addNewVerse}>+</button>
     <input class="form-control verse-new-id" type="text" placeholder="id" bind:value={newId} />
     <p class="verse-new-item" contenteditable="true" bind:innerHTML={newVerse}></p>
-  {:else}
-    {#each curVerses as verse, i}
-    <p class="verse-item" class:active={$curVerseIndex==i} on:click={verseSelector(i)}>
-      {@html verse.replace(/\n/g,'<br>')}
-    </p>
-    {/each}
   {/if}
 </div>
 
@@ -364,9 +463,9 @@ A word shall quickly slay him.`
   </button>
 
   <button class="btn btn-primary"
-          on:click={function(){$curVerseIndex -= 1; scrollToVerse($curVerseIndex)}}
+          on:click={()=>{$curVerseIndex -= 1; scrollToVerse($curVerseIndex)}}
           disabled={$curVerseIndex <= 0}>↑ Verš</button>
   <button class="btn btn-primary"
-          on:click={function(){$curVerseIndex += 1; scrollToVerse($curVerseIndex)}}
+          on:click={()=>{$curVerseIndex += 1; scrollToVerse($curVerseIndex)}}
           disabled={$curVerseIndex >= curVerses.length-1}>Verš ↓</button>
 </div>
