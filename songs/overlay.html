@@ -4,8 +4,6 @@
 <meta charset="utf-8">
 <title>Songs overlay</title>
 <style>
-@import url('https://fonts.googleapis.com/css?family=PT+Sans');
-
 html {
 	width: 1280px;
 	height: 720px;
@@ -36,13 +34,6 @@ body {
     line-height: 1;
 text-align: center;
 }
-#line2 {
-    font-size: 4em;
-    padding: 0 2rem;
-    color: white;
-    line-height: 1;
-    text-shadow: 4px 4px 5px black;
-}
 #bg {
     display: none;
 }
@@ -51,10 +42,10 @@ text-align: center;
 <body>
     <div id="overlay">
         <div id="bg"></div>
-        <div id="line1">Main header line</div>
-        <div id="line2"></div>
+        <div id="line1">text</div>
     </div>
 <script src="../js/gun.min.js"></script>
+<script src="../js/webrtc.js"></script>
 <script src="../js/config.js"></script>
 <script>
 GUN_SUPER_PEERS = GUN_SUPER_PEERS || ['http://127.0.0.1/gun'];
@@ -62,10 +53,6 @@ let gun = Gun(GUN_SUPER_PEERS);
 let overlay = gun.get('songs').get(window.location.hash || 'demo');
 overlay.get('line1').on(function(data, key){
     document.getElementById("line1").innerHTML = data.replace(/\n/g, '<br>');
-    console.log(key, data);
-});
-overlay.get('line2').on(function(data, key){
-    document.getElementById("line2").innerHTML = data;
     console.log(key, data);
 });
 overlay.get('show').on(function(data, key){

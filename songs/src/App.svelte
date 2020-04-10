@@ -1,5 +1,5 @@
 <script>
-  /* TODO: stage view overlay */
+  /* TODO: detect duplicates on import */
   import { onMount, onDestroy } from "svelte";
   import { writable } from 'svelte/store'
   import { writableGun } from './gunstores.js';
@@ -23,6 +23,8 @@
       } else if (event.code == 'ArrowRight') {
         $curSongIndex = Math.min($curSongIndex+1, playlist.length-1);
         $curVerseIndex = 0;
+      } else if (event.code == 'Enter') {
+        $show = !$show;
       }
 
       if (event.code == 'ArrowDown' || event.code == 'ArrowUp'
@@ -49,7 +51,7 @@
   let overlay = gun.get('songs').get(window.location.hash || 'demo');
 
   /* Synced variables */
-  let shown = writableGun(overlay.get('show'), false);
+  let show = writableGun(overlay.get('show'), false);
   let line1 = writableGun(overlay.get('line1'), '');
   let bodyclass = writableGun(overlay.get('bodyclass'), '');
   let curSongIndex = writableGun(overlay.get('curSongIndex'), 0);
@@ -204,8 +206,7 @@
   }
 
   function toggleShow() {
-    shown = !shown;
-    overlay.get('show').put(shown);
+    $show = !$show;
   }
 
   function importSongs() {
@@ -256,6 +257,9 @@
   .songs-filter.show {
     left: 0;
   }
+  .songs-filter .song-set {
+    text-align: left;
+  }
   .songs-filter .song-add {
     max-width: 3rem;
   }
@@ -295,8 +299,8 @@
     max-width: 2rem;
     padding: .25rem .5rem;
   }
-  .song-add {
-    float:right
+  .song-create {
+    float: right;
   }
 
   .verses {
@@ -418,7 +422,7 @@
   <button class="song-edit btn" class:btn-success={editing} on:click={()=>toggleEdit(curSong)}>
     ✎{#if editing} Uložiť{/if}
   </button>
-  <button class="song-add btn" on:click={addNewSong}>+</button>
+  <button class="song-create btn" on:click={addNewSong}>+</button>
   {#if editing}
     <button class="song-cancel btn btn-secondary" on:click={()=>{editing=false}}>× Zrušiť</button>
     <button class="song-remove btn btn-danger" on:click={()=>{editing=false; removeSong(editingSong)}}>🗑 Odstrániť</button>
@@ -458,8 +462,8 @@
           on:click={function(){$curSongIndex += 1}}
           disabled={$curSongIndex >= playlist.length-1}>Pieseň ↓</button>
 
-  <button class="control-button btn" on:click={toggleShow} class:btn-danger={shown} class:btn-success={!shown}>
-    {#if shown}Skryť{:else}Zobraziť{/if}
+  <button class="control-button btn" on:click={toggleShow} class:btn-danger={$show} class:btn-success={!$show}>
+    {#if $show}Skryť{:else}Zobraziť{/if}
   </button>
 
   <button class="btn btn-primary"
