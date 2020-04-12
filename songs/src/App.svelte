@@ -1,4 +1,5 @@
 <script>
+  /* TODO: responsive overlays */
   /* TODO: detect duplicates on import */
   import { onMount, onDestroy } from "svelte";
   import { writable } from 'svelte/store'
@@ -42,6 +43,7 @@
   let songFilter = "";
   let songsFiltered = songsSorted;
   let filterOpen = false;
+  let settingsOpen = false;
   let editing = false;
   let editingSong;
   let playlist = [];
@@ -61,8 +63,14 @@
     songsGun.map().once(function(data, key) {
       // console.log('songs', key, data);
       // data && songsGun.get(key).put(null); // clear songs
-      if (data === null) delete songs[key];
+      if (data === null) {delete songs[key]; return;}
       else songs[key] = data;
+      /* Retreive verses immediately
+      songsGun
+        .get(Gun.node.soul(data))
+        .get('verses')
+        .once(function(songVerses){songs[key].verses = songVerses})
+      */
     });
   };
   refreshSongsDb();
@@ -97,7 +105,10 @@
   $: curSong = playlist[$curSongIndex] || {title:'', author:'', order:'', verses:{}};
   $: setCurVerses(curSong);
   $: $line1 = curVerses[$curVerseIndex] || '';
-  $: songsSorted = Object.values(songs).sort((a,b)=>(a.title.toLowerCase() > b.title.toLowerCase()));
+  $: songsSorted = Object.values(songs).sort((a, b) => (
+    (a.title||'').replace(/\d+/g, s => ("0000" + parseInt(s)).slice(-4)).toLowerCase() >
+    (b.title||'').replace(/\d+/g, s => ("0000" + parseInt(s)).slice(-4)).toLowerCase()
+    ));
   $: songsFiltered = songFilter ? songsSorted.filter(matchesSong) : songsSorted;
   
   function setCurVerses(song) {
@@ -242,19 +253,24 @@
 <style>
   :global(body) {
     color: white;
+    max-height: 100vh;
   }
-  .songs-filter {
+  .settings,
+  .songs-filter,
+  .songs-control {
     display: block;
     margin: 0;
     padding: 0;
     width: 100%;
-    max-height: calc(100vh - 6rem);
+    max-height: calc(100vh - 5.75rem);
     position: absolute;
     left: -100%;
     overflow: scroll;
     z-index: 30;
   }
-  .songs-filter.show {
+  .settings.show,
+  .songs-filter.show,
+  .songs-control.show {
     left: 0;
   }
   .songs-filter .song-set {
@@ -268,6 +284,11 @@
   }
   .songs-filter .song-remove {
     max-width: 2rem;
+  }
+
+  .settings {
+    padding: 1rem;
+    background: var(--dark);
   }
 
   .song-item {
@@ -286,7 +307,7 @@
     overflow: auto;
     vertical-align: top;
     width: 100%;
-    margin: 1rem 0;
+    margin: 0 0 1rem 0;
   }
   .playlist .song-set {
     width: auto;
@@ -359,7 +380,7 @@
   }
 
   .bottom-buttons {
-    position: sticky;
+    position: absolute;
     bottom: 0;
     left: 0;
     width: 100%;
@@ -368,28 +389,85 @@
     margin: 0;
     padding: 1rem 0.25rem;
   }
+  @media screen and (min-width: 640px) {
+    .songs-filter,
+    .songs-control {
+      display: inline-block;
+      margin: 0;
+      padding: 0;
+      width: 30rem;
+      max-height: calc(100vh - 5.75rem);
+      position: static;
+      left: 0;
+      overflow: scroll;
+      vertical-align: top;
+      z-index: 30;
+    }
+    .settings.show {
+      width: 30rem;
+      left: auto;
+      right: 0;
+    }
+    .songs-control {
+      display: inline-block;
+      max-width: 60rem;
+    }
+    .playlist {
+      display: inline-block;
+      max-width: 20rem;
+    }
+    .info-bar {
+      display: inline-block;
+    }
+    .verses {
+      width: 30rem;
+    }
+  }
 </style>
 
-<p class="bodyclass">
-  Téma:
-  <select bind:value={$bodyclass}>
-    <option value="" selected>Predvolené</option>
-    <option value="simple-with-shadow">Jednoduché s tieňom</option>
-  </select>
-  Import: <input id="songsUpload" type="file" name="files" multiple on:change={importSongs}>
-</p>
-
 <div class="input-group" style="width: 100%; display: flex;">
-  <input class="form-control" type="text" placeholder="filter"
+  <input class="form-control" type="text" placeholder="filter piesní"
     bind:value={songFilter}
     on:input={()=>{filterOpen = true;}}
     on:click={()=>{filterOpen = !filterOpen;}}
     />
   <button type="button" class="form-control btn btn-secondary"
     style="max-width: 2rem; padding: .25rem;"
-    on:click={()=>{songFilter=''}}
+    on:click={()=>{filterOpen=!!songFilter; songFilter=''}}
+    title="Zrušiť filter"
     >×</button>
+  <button type="button" class="form-control btn btn-secondary"
+    style="max-width: 2rem; padding: .25rem;"
+    on:click={()=>{settingsOpen = !settingsOpen}}
+    title="Nastavenia"
+    >⚙</button>
 </div>
+
+<div class="settings" class:show={settingsOpen}>
+  <p>
+    Téma:
+    <select bind:value={$bodyclass}>
+      <option value="" selected>Predvolené</option>
+      <option value="simple-with-shadow">Jednoduché s tieňom</option>
+    </select>
+  </p>
+  <p>
+    Import piesní vo formáte OpenLyrics (z OpenLP):
+    <input id="songsUpload" type="file" name="files" multiple on:change={importSongs}>
+  </p>
+  <p>
+    <strong>Klávesové skratky:</strong><br/>
+    <strong>Šípky Hore - Dole:</strong>
+    prepínanie medzi verša aktuálnej piesne.<br/>
+    <strong>Šípky Vľavo - Vpravo:</strong>
+    prepínanie medzi piesňami v playliste.<br/>
+    <strong>Enter:</strong>
+    Zobraziť/Skryť verš<br/>
+    <strong>Ctrl+Enter:</strong>
+    Pri úprave piesne vloží nový verš.<br/>
+  </p>
+</div>
+
 
 <div class="songs-filter" class:show={filterOpen}>
   {#each songsFiltered as song}
@@ -405,62 +483,67 @@
   {/each}
 </div>
 
-<div class="playlist">
-  Playlist:
-  {#each playlist as song, i}
-  <div class="song-item btn-group">
-    <button class="song-set btn"
-      class:btn-primary={$curSongIndex==i}
-      on:click={()=>{$curSongIndex = i}}
-    >{i+1}. {song.title}</button>
-    <button class="song-remove btn btn-secondary" on:click={()=>removePlaylistItem(i)}>×</button>
+<div class="songs-control" class:show={!filterOpen && !settingsOpen}>
+  <div class="playlist">
+    {#each playlist as song, i}
+    <div class="song-item btn-group">
+      <button class="song-set btn"
+        class:btn-primary={$curSongIndex==i}
+        on:click={()=>{$curSongIndex = i}}
+      >{song.title}</button>
+      <button class="song-remove btn btn-secondary" on:click={()=>removePlaylistItem(i)}>×</button>
+    </div>
+    {:else}
+      Playlist je prázdny, pridajte piesne z filtra.
+    {/each}
   </div>
-  {/each}
-</div>
 
-<div class="info-bar">
-  <button class="song-edit btn" class:btn-success={editing} on:click={()=>toggleEdit(curSong)}>
-    ✎{#if editing} Uložiť{/if}
-  </button>
-  <button class="song-create btn" on:click={addNewSong}>+</button>
-  {#if editing}
-    <button class="song-cancel btn btn-secondary" on:click={()=>{editing=false}}>× Zrušiť</button>
-    <button class="song-remove btn btn-danger" on:click={()=>{editing=false; removeSong(editingSong)}}>🗑 Odstrániť</button>
-    <input class="form-control" type="text" placeholder="title" bind:value={editingSong.title} />
-    <input class="form-control" type="text" placeholder="author" bind:value={editingSong.author} />
-    <input class="form-control" type="text" placeholder="order" bind:value={editingSong.order} />
-  {:else}
-    <span>{curSong.title}</span> - <span>{curSong.author}</span>
-  {/if}
-</div>
-<div class="verses">
-  {#if editing}
-    {#each Object.entries(editingSong.verses||{}).filter(e=>typeof e[1] != 'object' && e[1] != null) as [id, verse]}
-    <button class="verse-remove btn btn-secondary" on:click={()=>removeVerse(id)}>×</button>
-    <span class="verse-id">{id}</span>
-    <p class="verse-item" contenteditable="true" bind:innerHTML={editingSong.verses[id]}></p>
-    {/each}
-  {:else}
-    {#each curVerses as verse, i}
-    <p class="verse-item" class:active={$curVerseIndex==i} on:click={()=>{$curVerseIndex = i}}>
-      {verse}
-    </p>
-    {/each}
-  {/if}
-  {#if editing}
-    <button class="verse-add btn btn-success" on:click={addNewVerse}>+</button>
-    <input class="form-control verse-new-id" type="text" placeholder="id" bind:value={newId} />
-    <p class="verse-new-item" contenteditable="true" bind:innerHTML={newVerse}></p>
-  {/if}
+  <div class="info-bar">
+    <button class="song-edit btn" class:btn-success={editing}
+            on:click={()=>toggleEdit(curSong)}
+            title="Upraviť"
+      >✎{#if editing} Uložiť{/if}
+    </button>
+    <button class="song-create btn" on:click={addNewSong} title="Vytvoriť novú pieseň">+</button>
+    {#if editing}
+      <button class="song-cancel btn btn-secondary" on:click={()=>{editing=false}}>× Zrušiť</button>
+      <button class="song-remove btn btn-danger" on:click={()=>{editing=false; removeSong(editingSong)}}>🗑 Odstrániť</button>
+      <input class="form-control" type="text" placeholder="title" bind:value={editingSong.title} />
+      <input class="form-control" type="text" placeholder="author" bind:value={editingSong.author} />
+      <input class="form-control" type="text" placeholder="order" bind:value={editingSong.order} />
+    {:else}
+      <span>{curSong.title}</span>
+    {/if}
+  </div>
+  <div class="verses">
+    {#if editing}
+      {#each Object.entries(editingSong.verses||{}).filter(e=>typeof e[1] != 'object' && e[1] != null) as [id, verse]}
+      <button class="verse-remove btn btn-secondary" on:click={()=>removeVerse(id)}>×</button>
+      <span class="verse-id">{id}</span>
+      <p class="verse-item" contenteditable="true" bind:innerHTML={editingSong.verses[id]}></p>
+      {/each}
+    {:else}
+      {#each curVerses as verse, i}
+      <p class="verse-item" class:active={$curVerseIndex==i} on:click={()=>{$curVerseIndex = i}}>
+        {verse}
+      </p>
+      {/each}
+    {/if}
+    {#if editing}
+      <button class="verse-add btn btn-success" on:click={addNewVerse} title="Pridať nový verš">+</button>
+      <input class="form-control verse-new-id" type="text" placeholder="id" bind:value={newId} />
+      <p class="verse-new-item" contenteditable="true" bind:innerHTML={newVerse}></p>
+    {/if}
+  </div>
 </div>
 
 <div class="bottom-buttons btn-group">
   <button class="btn btn-primary"
           on:click={function(){$curSongIndex -= 1}}
-          disabled={$curSongIndex <= 0}>↑ Pieseň</button>
+          disabled={$curSongIndex <= 0}>← Pieseň</button>
   <button class="btn btn-primary"
           on:click={function(){$curSongIndex += 1}}
-          disabled={$curSongIndex >= playlist.length-1}>Pieseň ↓</button>
+          disabled={$curSongIndex >= playlist.length-1}>Pieseň →</button>
 
   <button class="control-button btn" on:click={toggleShow} class:btn-danger={$show} class:btn-success={!$show}>
     {#if $show}Skryť{:else}Zobraziť{/if}
@@ -473,3 +556,17 @@
           on:click={()=>{$curVerseIndex += 1; scrollToVerse($curVerseIndex)}}
           disabled={$curVerseIndex >= curVerses.length-1}>Verš ↓</button>
 </div>
+
+
+<!--div>
+{#each songsFiltered as song}
+  <div class="song">
+    <h2>{song.title}</h2>
+    <strong>Poradie:</strong> <p>{song.order}</p>
+    {#each Object.entries(song.verses).filter(a=>(a[1] && a[0] !== '_')) as [id, verse]}
+      <strong>{id}:</strong>
+      <p>{verse}</p>
+    {/each}
+  </div>
+{/each}
+</div-->
