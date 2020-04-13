@@ -7,58 +7,56 @@
 @import url('https://fonts.googleapis.com/css?family=PT+Sans');
 
 html {
-	width: 1920px;
-	height: 1080px;
+    width: 1920px;
+    height: 1080px;
     overflow: hidden;
 }
 body {
-	width: 1920px;
-	height: 1080px;
-	margin: 0;
-	overflow: hidden;
-	font-family: 'PT Sans';
-	background: transparent;
+    width: 1920px;
+    height: 1080px;
+    margin: 0;
+    overflow: hidden;
+    font-family: 'PT Sans';
+    background: transparent;
 }
 #overlay {
-	position: absolute;
-    bottom: 50px;
-    left: 40px;
-    opacity: 0;
-    transition: all 1s linear;
-}
-#overlay.show {
-    opacity: 1;
-}
-
-#line1 {
-    font-size: 5em;
-    padding: 0 2rem;
-    color: white;
-    text-shadow: 2px 2px 2px black, -1px -1px black;
-    white-space: nowrap;
-}
-#line2 {
-    font-size: 4em;
-    padding: 0 2rem;
-    color: white;
-    line-height: 1;
-    text-shadow: 2px 2px 2px black, -1px -1px black;
-}
-#bg {
-    display: none;
-}
-</style>
-
-<style>
-.fullscreen-white-bg #overlay {
-	position: static;
+    position: static;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     opacity: 1;
+    transition: all 1s linear;
 }
-.fullscreen-white-bg #bg {
+
+#line1 {
+    font-size: 7vmin;
+    font-weight: bold;
+    padding: 0;
+    color: black;
+    margin: 6vmin;
+    text-shadow: none;
+    white-space: nowrap;
+    opacity: 0;
+    text-align: center;
+    transition: all .3s linear;
+}
+#line2 {
+    font-size: 5vmin;
+    padding: 0 18%;
+    color: black;
+    line-height: 1.5;
+    text-shadow: none;
+    opacity: 0;
+    text-align: center;
+    transition: all .3s linear;
+}
+.show #line1,
+.show #line2 {
+    opacity: 1;
+    transform: translate(0, 0);
+}
+#bg {
     background: white;
     display: block;
     position: absolute;
@@ -70,36 +68,9 @@ body {
     transform: rotate(-45deg) translate(0, -100%);
     transition: transform 1s;
 }
-.fullscreen-white-bg .show #bg {
+.show #bg {
     transform: rotate(-45deg) translate(0, 0);
-}
-.fullscreen-white-bg #line1 {
-    font-size: 2.5em;
-    font-weight: bold;
-    padding: 0;
-    color: black;
-    margin: 4rem;
-    text-shadow: none;
-    white-space: nowrap;
-    opacity: 0;
-    text-align: center;
-    transition: all .3s linear;
-}
-.fullscreen-white-bg #line2 {
-    font-size: 2.3em;
-    padding: 0 18%;
-    color: black;
-    line-height: 1.5;
-    text-shadow: none;
-    opacity: 0;
-    text-align: center;
-    transition: all .3s linear;
-}
-.fullscreen-white-bg .show #line1,
-.fullscreen-white-bg .show #line2 {
-    opacity: 1;
-    transform: translate(0, 0);
-}
+}    
 </style>
 </head>
 <body>
