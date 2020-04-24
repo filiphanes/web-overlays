@@ -4,33 +4,30 @@
 <meta charset="utf-8">
 <title>Bible overlay</title>
 <style>
-@import url('https://fonts.googleapis.com/css?family=PT+Sans');
-
 html {
-    width: 1920px;
-    height: 1080px;
+    width: 100%;
+    height: 100%;
     overflow: hidden;
 }
 body {
-    width: 1920px;
-    height: 1080px;
+    width: 100%;
+    height: 100%;
     margin: 0;
     overflow: hidden;
-    font-family: 'PT Sans';
+    font-family: sans-serif;
     background: transparent;
 }
 #overlay {
-    position: static;
-    top: 0;
+    position: relative;
+    top: 40%;
     left: 0;
-    width: 100%;
-    height: 100%;
+    transform: translate(0, -50%);
     opacity: 1;
     transition: all 1s linear;
 }
 
 #line1 {
-    font-size: 7vmin;
+    font-size: 6vh;
     font-weight: bold;
     padding: 0;
     color: black;
@@ -42,13 +39,13 @@ body {
     transition: all .3s linear;
 }
 #line2 {
-    font-size: 5vmin;
-    padding: 0 18%;
+    font-size: 6vh;
+    padding: 0 10%;
     color: black;
-    line-height: 1.5;
+    line-height: 1.3;
     text-shadow: none;
     opacity: 0;
-    text-align: center;
+    text-align: justify;
     transition: all .3s linear;
 }
 .show #line1,
@@ -74,8 +71,8 @@ body {
 </style>
 </head>
 <body>
+    <div id="bg"></div>
     <div id="overlay">
-        <div id="bg"></div>
         <div id="line1">Main header line</div>
         <div id="line2"></div>
     </div>
@@ -90,15 +87,11 @@ overlay.get('line1').on(function(data, key){
     console.log(key, data);
 });
 overlay.get('line2').on(function(data, key){
-    document.getElementById("line2").innerHTML = data;
+    document.getElementById("line2").innerHTML = data.replace(/(\s\w)\s/g, "$1&nbsp;");
     console.log(key, data);
 });
 overlay.get('show').on(function(data, key){
-    document.getElementById('overlay').classList.toggle('show', data);
-    console.log(key, data);
-});
-overlay.get('bodyclass').on(function(data, key){
-    document.body.className = data;
+    document.body.classList.toggle('show', data);
     console.log(key, data);
 });
 </script>
