@@ -12,8 +12,8 @@ html {
     overflow: hidden;
 }
 body {
-	width: 1920px;
-	height: 1080px;
+	width: 100%;
+	height: 100%;
 	margin: 0;
 	overflow: hidden;
 	font-family: 'PT Sans';
@@ -21,27 +21,28 @@ body {
 }
 #overlay {
 	position: absolute;
-    bottom: 50px;
-    left: 40px;
+    bottom: 6%;
+    left: 2%;
     opacity: 0;
-    transition: all 1s linear;
+    transition: all .9s linear;
 }
 #overlay.show {
     opacity: 1;
 }
 
 #line1 {
-    font-size: 5em;
+    font-size: 6vh;
+    font-weight: bold;
     padding: 0 2rem;
     color: white;
     text-shadow: 2px 2px 2px black, -1px -1px black;
     white-space: nowrap;
 }
 #line2 {
-    font-size: 4em;
+    font-size: 6vh;
     padding: 0 2rem;
     color: white;
-    line-height: 1;
+    line-height: 1.1;
     text-shadow: 2px 2px 2px black, -1px -1px black;
 }
 #bg {
