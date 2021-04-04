@@ -1,10 +1,10 @@
 import { writable } from 'svelte/store'
 
 function writableGun(gunData, value) {
-    value = value === undefined ? null : value;
+    if (value === undefined) value = null;
 	let store = writable(value);
     store.subscribe(data => {
-        value = data
+        value = {data};
     });
     gunData.once(data => {
         if (data === null && value != null) {
@@ -12,13 +12,13 @@ function writableGun(gunData, value) {
             gunData.put(value);
         }
         gunData.on((data, key) => {
-            console.debug(key, data);
-            store.set(data)
+            console.debug('gun.on', key, data);
+            store.set(data);
         });
     });
 
-    function set(value) {
-        gunData.put(value);
+    function set(newval) {
+        gunData.put(newval);
     }
     function update(fn) {
         set(fn(value));
