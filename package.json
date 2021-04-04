@@ -20,13 +20,14 @@
     "casparcg",
     "broadcast"
   ],
-  "author": "Filip Hanes <filip.hanes@pm.me>",
+  "author": "Filip Hanes <filip.hanes@protonmail.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/filiphanes/gun-overlays/issues"
   },
   "homepage": "https://github.com/filiphanes/gun-overlays#readme",
   "dependencies": {
-    "gun": "^0.2020.301"
+    "g": "^2.0.1",
+    "gun": "^0.2020.520"
   }
 }

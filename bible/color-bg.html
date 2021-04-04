@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Bible overlay</title>
+<style>
+@import url('https://fonts.googleapis.com/css?family=Roboto');
+
+html {
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+}
+* {
+    box-sizing: border-box;
+}
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+    font-family: Roboto, 'Open Sans', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, 'Segoe UI', Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: transparent;
+}
+#overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    opacity: 0;
+    transition: all .9s linear;
+    background: #FFFFFF70;
+    padding: 3vh 3vh 4vh 4vh;
+    width: 100%;
+}
+#overlay.show {
+    opacity: 1;
+}
+
+#line1 {
+    font-size: 5vh;
+    font-weight: bold;
+    color: white;
+    text-shadow: 2px 2px 2px black, -1px -1px black;
+    white-space: nowrap;
+}
+#line2 {
+    font-size: 6vh;
+    color: white;
+    line-height: 1.1;
+    text-shadow: 2px 2px 2px black, -1px -1px black;
+}
+#bg {
+    display: none;
+}
+</style>
+</head>
+<body>
+    <div id="overlay">
+        <div id="bg"></div>
+        <div id="line1">Main header line</div>
+        <div id="line2"></div>
+    </div>
+<script src="../js/gun.min.js"></script>
+<script src="../js/config.js"></script>
+<script>
+GUN_SUPER_PEERS = GUN_SUPER_PEERS || ['http://127.0.0.1/gun'];
+let gun = Gun(GUN_SUPER_PEERS);
+let overlay = gun.get('bible').get(window.location.hash || 'demo');
+overlay.get('line1').on(function(data, key){
+    document.getElementById("line1").innerHTML = data;
+    console.log(key, data);
+});
+overlay.get('line2').on(function(data, key){
+    document.getElementById("line2").innerHTML = data;
+    console.log(key, data);
+});
+overlay.get('show').on(function(data, key){
+    document.getElementById('overlay').classList.toggle('show', data);
+    console.log(key, data);
+});
+overlay.get('bodyclass').on(function(data, key){
+    document.body.className = data;
+    console.log(key, data);
+});
+</script>
+</body>
+</html>
