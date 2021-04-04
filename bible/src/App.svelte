@@ -29,7 +29,6 @@
 
   $: loadBible($bibleid + '.json');
   $: shownBook = booksByAbbr[$address.book] || {chapters:[], name: ""};
-  $: $address.count = $address.verse ? $address.count : 1;
   $: $line1 = addressAsString($address);
   $: $line2 = addressContent($address);
   $: filteredBooks = bookFilter ? books.filter(matchesBook) : books;
@@ -113,7 +112,10 @@
     a.chapter = a.chapter || '';
     a.verse = a.verse || '';
     a.count = a.count || 1;
-    return function() {$address = a};
+    return function() {
+      console.debug('addressSelector:');
+      $address = a;
+    };
   }
 
   function removeLastAddress(j) {

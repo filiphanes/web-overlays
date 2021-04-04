@@ -2,11 +2,6 @@ var app = (function () {
     'use strict';
 
     function noop() { }
-    function add_location(element, file, line, column, char) {
-        element.__svelte_meta = {
-            loc: { file, line, column, char }
-        };
-    }
     function run(fn) {
         return fn();
     }
@@ -22,10 +17,8 @@ var app = (function () {
     function safe_not_equal(a, b) {
         return a != a ? b == b : a !== b || ((a && typeof a === 'object') || typeof a === 'function');
     }
-    function validate_store(store, name) {
-        if (store != null && typeof store.subscribe !== 'function') {
-            throw new Error(`'${name}' is not a store with a 'subscribe' method`);
-        }
+    function is_empty(obj) {
+        return Object.keys(obj).length === 0;
     }
     function subscribe(store, ...callbacks) {
         if (store == null) {
@@ -82,10 +75,13 @@ var app = (function () {
     function children(element) {
         return Array.from(element.childNodes);
     }
+    function set_data(text, data) {
+        data = '' + data;
+        if (text.wholeText !== data)
+            text.data = data;
+    }
     function set_input_value(input, value) {
-        if (value != null || input.value) {
-            input.value = value;
-        }
+        input.value = value == null ? '' : value;
     }
     function set_style(node, key, value, important) {
         node.style.setProperty(key, value, important ? 'important' : '');
@@ -106,11 +102,6 @@ var app = (function () {
     function toggle_class(element, name, toggle) {
         element.classList[toggle ? 'add' : 'remove'](name);
     }
-    function custom_event(type, detail) {
-        const e = document.createEvent('CustomEvent');
-        e.initCustomEvent(type, false, false, detail);
-        return e;
-    }
 
     let current_component;
     function set_current_component(component) {
@@ -123,9 +114,6 @@ var app = (function () {
     }
     function onMount(fn) {
         get_current_component().$$.on_mount.push(fn);
-    }
-    function onDestroy(fn) {
-        get_current_component().$$.on_destroy.push(fn);
     }
 
     const dirty_components = [];
@@ -197,8 +185,6 @@ var app = (function () {
             block.i(local);
         }
     }
-
-    const globals = (typeof window !== 'undefined' ? window : global);
     function mount_component(component, target, anchor) {
         const { fragment, on_mount, on_destroy, after_update } = component.$$;
         fragment && fragment.m(target, anchor);
@@ -256,14 +242,15 @@ var app = (function () {
             context: new Map(parent_component ? parent_component.$$.context : []),
             // everything else
             callbacks: blank_object(),
-            dirty
+            dirty,
+            skip_bound: false
         };
         let ready = false;
         $$.ctx = instance
             ? instance(component, prop_values, (i, ret, ...rest) => {
                 const value = rest.length ? rest[0] : ret;
                 if ($$.ctx && not_equal($$.ctx[i], $$.ctx[i] = value)) {
-                    if ($$.bound[i])
+                    if (!$$.skip_bound && $$.bound[i])
                         $$.bound[i](value);
                     if (ready)
                         make_dirty(component, i);
@@ -308,88 +295,13 @@ var app = (function () {
                     callbacks.splice(index, 1);
             };
         }
-        $set() {
-            // overridden by instance, if it has props
-        }
-    }
-
-    function dispatch_dev(type, detail) {
-        document.dispatchEvent(custom_event(type, Object.assign({ version: '3.20.1' }, detail)));
-    }
-    function append_dev(target, node) {
-        dispatch_dev("SvelteDOMInsert", { target, node });
-        append(target, node);
-    }
-    function insert_dev(target, node, anchor) {
-        dispatch_dev("SvelteDOMInsert", { target, node, anchor });
-        insert(target, node, anchor);
-    }
-    function detach_dev(node) {
-        dispatch_dev("SvelteDOMRemove", { node });
-        detach(node);
-    }
-    function listen_dev(node, event, handler, options, has_prevent_default, has_stop_propagation) {
-        const modifiers = options === true ? ["capture"] : options ? Array.from(Object.keys(options)) : [];
-        if (has_prevent_default)
-            modifiers.push('preventDefault');
-        if (has_stop_propagation)
-            modifiers.push('stopPropagation');
-        dispatch_dev("SvelteDOMAddEventListener", { node, event, handler, modifiers });
-        const dispose = listen(node, event, handler, options);
-        return () => {
-            dispatch_dev("SvelteDOMRemoveEventListener", { node, event, handler, modifiers });
-            dispose();
-        };
-    }
-    function attr_dev(node, attribute, value) {
-        attr(node, attribute, value);
-        if (value == null)
-            dispatch_dev("SvelteDOMRemoveAttribute", { node, attribute });
-        else
-            dispatch_dev("SvelteDOMSetAttribute", { node, attribute, value });
-    }
-    function prop_dev(node, property, value) {
-        node[property] = value;
-        dispatch_dev("SvelteDOMSetProperty", { node, property, value });
-    }
-    function set_data_dev(text, data) {
-        data = '' + data;
-        if (text.data === data)
-            return;
-        dispatch_dev("SvelteDOMSetData", { node: text, data });
-        text.data = data;
-    }
-    function validate_each_argument(arg) {
-        if (typeof arg !== 'string' && !(arg && typeof arg === 'object' && 'length' in arg)) {
-            let msg = '{#each} only iterates over array-like objects.';
-            if (typeof Symbol === 'function' && arg && Symbol.iterator in arg) {
-                msg += ' You can use a spread to convert this iterable into an array.';
-            }
-            throw new Error(msg);
-        }
-    }
-    function validate_slots(name, slot, keys) {
-        for (const slot_key of Object.keys(slot)) {
-            if (!~keys.indexOf(slot_key)) {
-                console.warn(`<${name}> received an unexpected slot "${slot_key}".`);
+        $set($$props) {
+            if (this.$$set && !is_empty($$props)) {
+                this.$$.skip_bound = true;
+                this.$$set($$props);
+                this.$$.skip_bound = false;
             }
         }
-    }
-    class SvelteComponentDev extends SvelteComponent {
-        constructor(options) {
-            if (!options || (!options.target && !options.$$inline)) {
-                throw new Error(`'target' is a required option`);
-            }
-            super();
-        }
-        $destroy() {
-            super.$destroy();
-            this.$destroy = () => {
-                console.warn(`Component was already destroyed`); // eslint-disable-line no-console
-            };
-        }
-        $capture_state() { }
-        $inject_state() { }
     }
 
     const subscriber_queue = [];
@@ -473,10 +385,7 @@ var app = (function () {
         return { set, update, subscribe };
     }
 
-    /* src/App.svelte generated by Svelte v3.20.1 */
-
-    const { Object: Object_1, console: console_1 } = globals;
-    const file = "src/App.svelte";
+    /* src/App.svelte generated by Svelte v3.24.1 */
 
     function get_each_context_1(ctx, list, i) {
     	const child_ctx = ctx.slice();
@@ -489,6 +398,8 @@ var app = (function () {
     	const child_ctx = ctx.slice();
     	child_ctx[67] = list[i][0];
     	child_ctx[68] = list[i][1];
+    	child_ctx[69] = list;
+    	child_ctx[70] = i;
     	return child_ctx;
     }
 
@@ -518,26 +429,27 @@ var app = (function () {
     	let t5;
     	let button3;
     	let t7;
+    	let mounted;
     	let dispose;
 
     	function click_handler_3(...args) {
-    		return /*click_handler_3*/ ctx[46](/*song*/ ctx[73], ...args);
+    		return /*click_handler_3*/ ctx[35](/*song*/ ctx[73], ...args);
     	}
 
     	function click_handler_4(...args) {
-    		return /*click_handler_4*/ ctx[47](/*song*/ ctx[73], ...args);
+    		return /*click_handler_4*/ ctx[36](/*song*/ ctx[73], ...args);
     	}
 
     	function click_handler_5(...args) {
-    		return /*click_handler_5*/ ctx[48](/*song*/ ctx[73], ...args);
+    		return /*click_handler_5*/ ctx[37](/*song*/ ctx[73], ...args);
     	}
 
     	function click_handler_6(...args) {
-    		return /*click_handler_6*/ ctx[49](/*song*/ ctx[73], ...args);
+    		return /*click_handler_6*/ ctx[38](/*song*/ ctx[73], ...args);
     	}
 
-    	const block = {
-    		c: function create() {
+    	return {
+    		c() {
     			div = element("div");
     			button0 = element("button");
     			t0 = text(t0_value);
@@ -551,88 +463,67 @@ var app = (function () {
     			button3 = element("button");
     			button3.textContent = "🗑";
     			t7 = space();
-    			attr_dev(button0, "class", "song-set btn svelte-kw30b8");
+    			attr(button0, "class", "song-set btn svelte-kw30b8");
     			toggle_class(button0, "btn-primary", /*song*/ ctx[73] == /*curSong*/ ctx[7]);
-    			add_location(button0, file, 474, 4, 12611);
-    			attr_dev(button1, "class", "song-add btn btn-success svelte-kw30b8");
-    			add_location(button1, file, 478, 4, 12772);
-    			attr_dev(button2, "class", "song-edit btn btn-secondary svelte-kw30b8");
-    			add_location(button2, file, 479, 4, 12863);
-    			attr_dev(button3, "class", "song-remove btn btn-secondary svelte-kw30b8");
-    			add_location(button3, file, 480, 4, 12974);
-    			attr_dev(div, "class", "song-item btn-group svelte-kw30b8");
-    			add_location(div, file, 473, 2, 12573);
+    			attr(button1, "class", "song-add btn btn-success svelte-kw30b8");
+    			attr(button2, "class", "song-edit btn btn-secondary svelte-kw30b8");
+    			attr(button3, "class", "song-remove btn btn-secondary svelte-kw30b8");
+    			attr(div, "class", "song-item btn-group svelte-kw30b8");
     		},
-    		m: function mount(target, anchor, remount) {
-    			insert_dev(target, div, anchor);
-    			append_dev(div, button0);
-    			append_dev(button0, t0);
-    			append_dev(div, t1);
-    			append_dev(div, button1);
-    			append_dev(div, t3);
-    			append_dev(div, button2);
-    			append_dev(div, t5);
-    			append_dev(div, button3);
-    			append_dev(div, t7);
-    			if (remount) run_all(dispose);
+    		m(target, anchor) {
+    			insert(target, div, anchor);
+    			append(div, button0);
+    			append(button0, t0);
+    			append(div, t1);
+    			append(div, button1);
+    			append(div, t3);
+    			append(div, button2);
+    			append(div, t5);
+    			append(div, button3);
+    			append(div, t7);
 
-    			dispose = [
-    				listen_dev(button0, "click", click_handler_3, false, false, false),
-    				listen_dev(button1, "click", click_handler_4, false, false, false),
-    				listen_dev(button2, "click", click_handler_5, false, false, false),
-    				listen_dev(button3, "click", click_handler_6, false, false, false)
-    			];
+    			if (!mounted) {
+    				dispose = [
+    					listen(button0, "click", click_handler_3),
+    					listen(button1, "click", click_handler_4),
+    					listen(button2, "click", click_handler_5),
+    					listen(button3, "click", click_handler_6)
+    				];
+
+    				mounted = true;
+    			}
     		},
-    		p: function update(new_ctx, dirty) {
+    		p(new_ctx, dirty) {
     			ctx = new_ctx;
-    			if (dirty[0] & /*songsFiltered*/ 2 && t0_value !== (t0_value = /*song*/ ctx[73].title + "")) set_data_dev(t0, t0_value);
+    			if (dirty[0] & /*songsFiltered*/ 2 && t0_value !== (t0_value = /*song*/ ctx[73].title + "")) set_data(t0, t0_value);
 
     			if (dirty[0] & /*songsFiltered, curSong*/ 130) {
     				toggle_class(button0, "btn-primary", /*song*/ ctx[73] == /*curSong*/ ctx[7]);
     			}
     		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div);
+    		d(detaching) {
+    			if (detaching) detach(div);
+    			mounted = false;
     			run_all(dispose);
     		}
     	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_each_block_3.name,
-    		type: "each",
-    		source: "(473:2) {#each songsFiltered as song}",
-    		ctx
-    	});
-
-    	return block;
     }
 
     // (496:4) {:else}
     function create_else_block_3(ctx) {
     	let t;
 
-    	const block = {
-    		c: function create() {
+    	return {
+    		c() {
     			t = text("Playlist je prázdny, pridajte piesne z filtra.");
     		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, t, anchor);
+    		m(target, anchor) {
+    			insert(target, t, anchor);
     		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(t);
+    		d(detaching) {
+    			if (detaching) detach(t);
     		}
     	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_else_block_3.name,
-    		type: "else",
-    		source: "(496:4) {:else}",
-    		ctx
-    	});
-
-    	return block;
     }
 
     // (488:4) {#each playlist as song, i}
@@ -644,18 +535,19 @@ var app = (function () {
     	let t1;
     	let button1;
     	let t3;
+    	let mounted;
     	let dispose;
 
     	function click_handler_7(...args) {
-    		return /*click_handler_7*/ ctx[50](/*i*/ ctx[72], ...args);
+    		return /*click_handler_7*/ ctx[39](/*i*/ ctx[72], ...args);
     	}
 
     	function click_handler_8(...args) {
-    		return /*click_handler_8*/ ctx[51](/*i*/ ctx[72], ...args);
+    		return /*click_handler_8*/ ctx[40](/*i*/ ctx[72], ...args);
     	}
 
-    	const block = {
-    		c: function create() {
+    	return {
+    		c() {
     			div = element("div");
     			button0 = element("button");
     			t0 = text(t0_value);
@@ -663,78 +555,59 @@ var app = (function () {
     			button1 = element("button");
     			button1.textContent = "×";
     			t3 = space();
-    			attr_dev(button0, "class", "song-set btn svelte-kw30b8");
+    			attr(button0, "class", "song-set btn svelte-kw30b8");
     			toggle_class(button0, "btn-primary", /*$curSongIndex*/ ctx[12] == /*i*/ ctx[72]);
-    			add_location(button0, file, 489, 6, 13262);
-    			attr_dev(button1, "class", "song-remove btn btn-secondary svelte-kw30b8");
-    			add_location(button1, file, 493, 6, 13414);
-    			attr_dev(div, "class", "song-item btn-group svelte-kw30b8");
-    			add_location(div, file, 488, 4, 13222);
+    			attr(button1, "class", "song-remove btn btn-secondary svelte-kw30b8");
+    			attr(div, "class", "song-item btn-group svelte-kw30b8");
     		},
-    		m: function mount(target, anchor, remount) {
-    			insert_dev(target, div, anchor);
-    			append_dev(div, button0);
-    			append_dev(button0, t0);
-    			append_dev(div, t1);
-    			append_dev(div, button1);
-    			append_dev(div, t3);
-    			if (remount) run_all(dispose);
+    		m(target, anchor) {
+    			insert(target, div, anchor);
+    			append(div, button0);
+    			append(button0, t0);
+    			append(div, t1);
+    			append(div, button1);
+    			append(div, t3);
 
-    			dispose = [
-    				listen_dev(button0, "click", click_handler_7, false, false, false),
-    				listen_dev(button1, "click", click_handler_8, false, false, false)
-    			];
+    			if (!mounted) {
+    				dispose = [
+    					listen(button0, "click", click_handler_7),
+    					listen(button1, "click", click_handler_8)
+    				];
+
+    				mounted = true;
+    			}
     		},
-    		p: function update(new_ctx, dirty) {
+    		p(new_ctx, dirty) {
     			ctx = new_ctx;
-    			if (dirty[0] & /*playlist*/ 64 && t0_value !== (t0_value = /*song*/ ctx[73].title + "")) set_data_dev(t0, t0_value);
+    			if (dirty[0] & /*playlist*/ 64 && t0_value !== (t0_value = /*song*/ ctx[73].title + "")) set_data(t0, t0_value);
 
     			if (dirty[0] & /*$curSongIndex*/ 4096) {
     				toggle_class(button0, "btn-primary", /*$curSongIndex*/ ctx[12] == /*i*/ ctx[72]);
     			}
     		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div);
+    		d(detaching) {
+    			if (detaching) detach(div);
+    			mounted = false;
     			run_all(dispose);
     		}
     	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_each_block_2.name,
-    		type: "each",
-    		source: "(488:4) {#each playlist as song, i}",
-    		ctx
-    	});
-
-    	return block;
     }
 
     // (505:8) {#if editing}
     function create_if_block_4(ctx) {
     	let t;
 
-    	const block = {
-    		c: function create() {
+    	return {
+    		c() {
     			t = text("Uložiť");
     		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, t, anchor);
+    		m(target, anchor) {
+    			insert(target, t, anchor);
     		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(t);
+    		d(detaching) {
+    			if (detaching) detach(t);
     		}
     	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block_4.name,
-    		type: "if",
-    		source: "(505:8) {#if editing}",
-    		ctx
-    	});
-
-    	return block;
     }
 
     // (514:4) {:else}
@@ -743,33 +616,22 @@ var app = (function () {
     	let t_value = /*curSong*/ ctx[7].title + "";
     	let t;
 
-    	const block = {
-    		c: function create() {
+    	return {
+    		c() {
     			span = element("span");
     			t = text(t_value);
-    			add_location(span, file, 514, 6, 14480);
     		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, span, anchor);
-    			append_dev(span, t);
+    		m(target, anchor) {
+    			insert(target, span, anchor);
+    			append(span, t);
     		},
-    		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*curSong*/ 128 && t_value !== (t_value = /*curSong*/ ctx[7].title + "")) set_data_dev(t, t_value);
+    		p(ctx, dirty) {
+    			if (dirty[0] & /*curSong*/ 128 && t_value !== (t_value = /*curSong*/ ctx[7].title + "")) set_data(t, t_value);
     		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(span);
+    		d(detaching) {
+    			if (detaching) detach(span);
     		}
     	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_else_block_2.name,
-    		type: "else",
-    		source: "(514:4) {:else}",
-    		ctx
-    	});
-
-    	return block;
     }
 
     // (508:4) {#if editing}
@@ -783,10 +645,11 @@ var app = (function () {
     	let input1;
     	let t5;
     	let input2;
+    	let mounted;
     	let dispose;
 
-    	const block = {
-    		c: function create() {
+    	return {
+    		c() {
     			button0 = element("button");
     			button0.textContent = "× Zrušiť";
     			t1 = space();
@@ -798,47 +661,45 @@ var app = (function () {
     			input1 = element("input");
     			t5 = space();
     			input2 = element("input");
-    			attr_dev(button0, "class", "song-cancel btn btn-secondary");
-    			add_location(button0, file, 508, 6, 13938);
-    			attr_dev(button1, "class", "song-remove btn btn-danger");
-    			add_location(button1, file, 509, 6, 14039);
-    			attr_dev(input0, "class", "form-control");
-    			attr_dev(input0, "type", "text");
-    			attr_dev(input0, "placeholder", "title");
-    			add_location(input0, file, 510, 6, 14166);
-    			attr_dev(input1, "class", "form-control");
-    			attr_dev(input1, "type", "text");
-    			attr_dev(input1, "placeholder", "author");
-    			add_location(input1, file, 511, 6, 14266);
-    			attr_dev(input2, "class", "form-control");
-    			attr_dev(input2, "type", "text");
-    			attr_dev(input2, "placeholder", "order");
-    			add_location(input2, file, 512, 6, 14368);
+    			attr(button0, "class", "song-cancel btn btn-secondary");
+    			attr(button1, "class", "song-remove btn btn-danger");
+    			attr(input0, "class", "form-control");
+    			attr(input0, "type", "text");
+    			attr(input0, "placeholder", "title");
+    			attr(input1, "class", "form-control");
+    			attr(input1, "type", "text");
+    			attr(input1, "placeholder", "author");
+    			attr(input2, "class", "form-control");
+    			attr(input2, "type", "text");
+    			attr(input2, "placeholder", "order");
     		},
-    		m: function mount(target, anchor, remount) {
-    			insert_dev(target, button0, anchor);
-    			insert_dev(target, t1, anchor);
-    			insert_dev(target, button1, anchor);
-    			insert_dev(target, t3, anchor);
-    			insert_dev(target, input0, anchor);
+    		m(target, anchor) {
+    			insert(target, button0, anchor);
+    			insert(target, t1, anchor);
+    			insert(target, button1, anchor);
+    			insert(target, t3, anchor);
+    			insert(target, input0, anchor);
     			set_input_value(input0, /*editingSong*/ ctx[5].title);
-    			insert_dev(target, t4, anchor);
-    			insert_dev(target, input1, anchor);
+    			insert(target, t4, anchor);
+    			insert(target, input1, anchor);
     			set_input_value(input1, /*editingSong*/ ctx[5].author);
-    			insert_dev(target, t5, anchor);
-    			insert_dev(target, input2, anchor);
+    			insert(target, t5, anchor);
+    			insert(target, input2, anchor);
     			set_input_value(input2, /*editingSong*/ ctx[5].order);
-    			if (remount) run_all(dispose);
 
-    			dispose = [
-    				listen_dev(button0, "click", /*click_handler_10*/ ctx[53], false, false, false),
-    				listen_dev(button1, "click", /*click_handler_11*/ ctx[54], false, false, false),
-    				listen_dev(input0, "input", /*input0_input_handler_1*/ ctx[55]),
-    				listen_dev(input1, "input", /*input1_input_handler*/ ctx[56]),
-    				listen_dev(input2, "input", /*input2_input_handler*/ ctx[57])
-    			];
+    			if (!mounted) {
+    				dispose = [
+    					listen(button0, "click", /*click_handler_10*/ ctx[42]),
+    					listen(button1, "click", /*click_handler_11*/ ctx[43]),
+    					listen(input0, "input", /*input0_input_handler_1*/ ctx[44]),
+    					listen(input1, "input", /*input1_input_handler*/ ctx[45]),
+    					listen(input2, "input", /*input2_input_handler*/ ctx[46])
+    				];
+
+    				mounted = true;
+    			}
     		},
-    		p: function update(ctx, dirty) {
+    		p(ctx, dirty) {
     			if (dirty[0] & /*editingSong*/ 32 && input0.value !== /*editingSong*/ ctx[5].title) {
     				set_input_value(input0, /*editingSong*/ ctx[5].title);
     			}
@@ -851,61 +712,50 @@ var app = (function () {
     				set_input_value(input2, /*editingSong*/ ctx[5].order);
     			}
     		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(button0);
-    			if (detaching) detach_dev(t1);
-    			if (detaching) detach_dev(button1);
-    			if (detaching) detach_dev(t3);
-    			if (detaching) detach_dev(input0);
-    			if (detaching) detach_dev(t4);
-    			if (detaching) detach_dev(input1);
-    			if (detaching) detach_dev(t5);
-    			if (detaching) detach_dev(input2);
+    		d(detaching) {
+    			if (detaching) detach(button0);
+    			if (detaching) detach(t1);
+    			if (detaching) detach(button1);
+    			if (detaching) detach(t3);
+    			if (detaching) detach(input0);
+    			if (detaching) detach(t4);
+    			if (detaching) detach(input1);
+    			if (detaching) detach(t5);
+    			if (detaching) detach(input2);
+    			mounted = false;
     			run_all(dispose);
     		}
     	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block_3.name,
-    		type: "if",
-    		source: "(508:4) {#if editing}",
-    		ctx
-    	});
-
-    	return block;
     }
 
     // (525:4) {:else}
     function create_else_block_1(ctx) {
     	let each_1_anchor;
     	let each_value_1 = /*curVerses*/ ctx[8];
-    	validate_each_argument(each_value_1);
     	let each_blocks = [];
 
     	for (let i = 0; i < each_value_1.length; i += 1) {
     		each_blocks[i] = create_each_block_1(get_each_context_1(ctx, each_value_1, i));
     	}
 
-    	const block = {
-    		c: function create() {
+    	return {
+    		c() {
     			for (let i = 0; i < each_blocks.length; i += 1) {
     				each_blocks[i].c();
     			}
 
     			each_1_anchor = empty();
     		},
-    		m: function mount(target, anchor) {
+    		m(target, anchor) {
     			for (let i = 0; i < each_blocks.length; i += 1) {
     				each_blocks[i].m(target, anchor);
     			}
 
-    			insert_dev(target, each_1_anchor, anchor);
+    			insert(target, each_1_anchor, anchor);
     		},
-    		p: function update(ctx, dirty) {
+    		p(ctx, dirty) {
     			if (dirty[0] & /*$curVerseIndex, curVerses*/ 2304) {
     				each_value_1 = /*curVerses*/ ctx[8];
-    				validate_each_argument(each_value_1);
     				let i;
 
     				for (i = 0; i < each_value_1.length; i += 1) {
@@ -927,53 +777,41 @@ var app = (function () {
     				each_blocks.length = each_value_1.length;
     			}
     		},
-    		d: function destroy(detaching) {
+    		d(detaching) {
     			destroy_each(each_blocks, detaching);
-    			if (detaching) detach_dev(each_1_anchor);
+    			if (detaching) detach(each_1_anchor);
     		}
     	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_else_block_1.name,
-    		type: "else",
-    		source: "(525:4) {:else}",
-    		ctx
-    	});
-
-    	return block;
     }
 
     // (519:4) {#if editing}
     function create_if_block_2(ctx) {
     	let each_1_anchor;
     	let each_value = Object.entries(/*editingSong*/ ctx[5].verses || {}).filter(func);
-    	validate_each_argument(each_value);
     	let each_blocks = [];
 
     	for (let i = 0; i < each_value.length; i += 1) {
     		each_blocks[i] = create_each_block(get_each_context(ctx, each_value, i));
     	}
 
-    	const block = {
-    		c: function create() {
+    	return {
+    		c() {
     			for (let i = 0; i < each_blocks.length; i += 1) {
     				each_blocks[i].c();
     			}
 
     			each_1_anchor = empty();
     		},
-    		m: function mount(target, anchor) {
+    		m(target, anchor) {
     			for (let i = 0; i < each_blocks.length; i += 1) {
     				each_blocks[i].m(target, anchor);
     			}
 
-    			insert_dev(target, each_1_anchor, anchor);
+    			insert(target, each_1_anchor, anchor);
     		},
-    		p: function update(ctx, dirty) {
+    		p(ctx, dirty) {
     			if (dirty[0] & /*editingSong, removeVerse*/ 33554464) {
     				each_value = Object.entries(/*editingSong*/ ctx[5].verses || {}).filter(func);
-    				validate_each_argument(each_value);
     				let i;
 
     				for (i = 0; i < each_value.length; i += 1) {
@@ -995,21 +833,11 @@ var app = (function () {
     				each_blocks.length = each_value.length;
     			}
     		},
-    		d: function destroy(detaching) {
+    		d(detaching) {
     			destroy_each(each_blocks, detaching);
-    			if (detaching) detach_dev(each_1_anchor);
+    			if (detaching) detach(each_1_anchor);
     		}
     	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block_2.name,
-    		type: "if",
-    		source: "(519:4) {#if editing}",
-    		ctx
-    	});
-
-    	return block;
     }
 
     // (526:6) {#each curVerses as verse, i}
@@ -1018,51 +846,45 @@ var app = (function () {
     	let t0_value = /*verse*/ ctx[68] + "";
     	let t0;
     	let t1;
+    	let mounted;
     	let dispose;
 
     	function click_handler_13(...args) {
-    		return /*click_handler_13*/ ctx[60](/*i*/ ctx[72], ...args);
+    		return /*click_handler_13*/ ctx[49](/*i*/ ctx[72], ...args);
     	}
 
-    	const block = {
-    		c: function create() {
+    	return {
+    		c() {
     			p = element("p");
     			t0 = text(t0_value);
     			t1 = space();
-    			attr_dev(p, "class", "verse-item svelte-kw30b8");
+    			attr(p, "class", "verse-item svelte-kw30b8");
     			toggle_class(p, "active", /*$curVerseIndex*/ ctx[11] == /*i*/ ctx[72]);
-    			add_location(p, file, 526, 6, 14988);
     		},
-    		m: function mount(target, anchor, remount) {
-    			insert_dev(target, p, anchor);
-    			append_dev(p, t0);
-    			append_dev(p, t1);
-    			if (remount) dispose();
-    			dispose = listen_dev(p, "click", click_handler_13, false, false, false);
+    		m(target, anchor) {
+    			insert(target, p, anchor);
+    			append(p, t0);
+    			append(p, t1);
+
+    			if (!mounted) {
+    				dispose = listen(p, "click", click_handler_13);
+    				mounted = true;
+    			}
     		},
-    		p: function update(new_ctx, dirty) {
+    		p(new_ctx, dirty) {
     			ctx = new_ctx;
-    			if (dirty[0] & /*curVerses*/ 256 && t0_value !== (t0_value = /*verse*/ ctx[68] + "")) set_data_dev(t0, t0_value);
+    			if (dirty[0] & /*curVerses*/ 256 && t0_value !== (t0_value = /*verse*/ ctx[68] + "")) set_data(t0, t0_value);
 
     			if (dirty[0] & /*$curVerseIndex*/ 2048) {
     				toggle_class(p, "active", /*$curVerseIndex*/ ctx[11] == /*i*/ ctx[72]);
     			}
     		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(p);
+    		d(detaching) {
+    			if (detaching) detach(p);
+    			mounted = false;
     			dispose();
     		}
     	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_each_block_1.name,
-    		type: "each",
-    		source: "(526:6) {#each curVerses as verse, i}",
-    		ctx
-    	});
-
-    	return block;
     }
 
     // (520:6) {#each Object.entries(editingSong.verses||{}).filter(e=>typeof e[1] != 'object' && e[1] != null) as [id, verse]}
@@ -1074,18 +896,19 @@ var app = (function () {
     	let t2;
     	let t3;
     	let p;
+    	let mounted;
     	let dispose;
 
     	function click_handler_12(...args) {
-    		return /*click_handler_12*/ ctx[58](/*id*/ ctx[67], ...args);
+    		return /*click_handler_12*/ ctx[47](/*id*/ ctx[67], ...args);
     	}
 
     	function p_input_handler() {
-    		/*p_input_handler*/ ctx[59].call(p, /*id*/ ctx[67]);
+    		/*p_input_handler*/ ctx[48].call(p, /*id*/ ctx[67]);
     	}
 
-    	const block = {
-    		c: function create() {
+    	return {
+    		c() {
     			button = element("button");
     			button.textContent = "×";
     			t1 = space();
@@ -1093,61 +916,51 @@ var app = (function () {
     			t2 = text(t2_value);
     			t3 = space();
     			p = element("p");
-    			attr_dev(button, "class", "verse-remove btn btn-secondary svelte-kw30b8");
-    			add_location(button, file, 520, 6, 14694);
-    			attr_dev(span, "class", "verse-id svelte-kw30b8");
-    			add_location(span, file, 521, 6, 14789);
-    			attr_dev(p, "class", "verse-item svelte-kw30b8");
-    			attr_dev(p, "contenteditable", "true");
+    			attr(button, "class", "verse-remove btn btn-secondary svelte-kw30b8");
+    			attr(span, "class", "verse-id svelte-kw30b8");
+    			attr(p, "class", "verse-item svelte-kw30b8");
+    			attr(p, "contenteditable", "true");
     			if (/*editingSong*/ ctx[5].verses[/*id*/ ctx[67]] === void 0) add_render_callback(p_input_handler);
-    			add_location(p, file, 522, 6, 14830);
     		},
-    		m: function mount(target, anchor, remount) {
-    			insert_dev(target, button, anchor);
-    			insert_dev(target, t1, anchor);
-    			insert_dev(target, span, anchor);
-    			append_dev(span, t2);
-    			insert_dev(target, t3, anchor);
-    			insert_dev(target, p, anchor);
+    		m(target, anchor) {
+    			insert(target, button, anchor);
+    			insert(target, t1, anchor);
+    			insert(target, span, anchor);
+    			append(span, t2);
+    			insert(target, t3, anchor);
+    			insert(target, p, anchor);
 
     			if (/*editingSong*/ ctx[5].verses[/*id*/ ctx[67]] !== void 0) {
     				p.innerHTML = /*editingSong*/ ctx[5].verses[/*id*/ ctx[67]];
     			}
 
-    			if (remount) run_all(dispose);
+    			if (!mounted) {
+    				dispose = [
+    					listen(button, "click", click_handler_12),
+    					listen(p, "input", p_input_handler)
+    				];
 
-    			dispose = [
-    				listen_dev(button, "click", click_handler_12, false, false, false),
-    				listen_dev(p, "input", p_input_handler)
-    			];
+    				mounted = true;
+    			}
     		},
-    		p: function update(new_ctx, dirty) {
+    		p(new_ctx, dirty) {
     			ctx = new_ctx;
-    			if (dirty[0] & /*editingSong*/ 32 && t2_value !== (t2_value = /*id*/ ctx[67] + "")) set_data_dev(t2, t2_value);
+    			if (dirty[0] & /*editingSong*/ 32 && t2_value !== (t2_value = /*id*/ ctx[67] + "")) set_data(t2, t2_value);
 
     			if (dirty[0] & /*editingSong*/ 32 && /*editingSong*/ ctx[5].verses[/*id*/ ctx[67]] !== p.innerHTML) {
     				p.innerHTML = /*editingSong*/ ctx[5].verses[/*id*/ ctx[67]];
     			}
     		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(button);
-    			if (detaching) detach_dev(t1);
-    			if (detaching) detach_dev(span);
-    			if (detaching) detach_dev(t3);
-    			if (detaching) detach_dev(p);
+    		d(detaching) {
+    			if (detaching) detach(button);
+    			if (detaching) detach(t1);
+    			if (detaching) detach(span);
+    			if (detaching) detach(t3);
+    			if (detaching) detach(p);
+    			mounted = false;
     			run_all(dispose);
     		}
     	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_each_block.name,
-    		type: "each",
-    		source: "(520:6) {#each Object.entries(editingSong.verses||{}).filter(e=>typeof e[1] != 'object' && e[1] != null) as [id, verse]}",
-    		ctx
-    	});
-
-    	return block;
     }
 
     // (532:4) {#if editing}
@@ -1157,49 +970,49 @@ var app = (function () {
     	let input;
     	let t2;
     	let p;
+    	let mounted;
     	let dispose;
 
-    	const block = {
-    		c: function create() {
+    	return {
+    		c() {
     			button = element("button");
     			button.textContent = "+";
     			t1 = space();
     			input = element("input");
     			t2 = space();
     			p = element("p");
-    			attr_dev(button, "class", "verse-add btn btn-success svelte-kw30b8");
-    			attr_dev(button, "title", "Pridať nový verš");
-    			add_location(button, file, 532, 6, 15155);
-    			attr_dev(input, "class", "form-control verse-new-id svelte-kw30b8");
-    			attr_dev(input, "type", "text");
-    			attr_dev(input, "placeholder", "id");
-    			add_location(input, file, 533, 6, 15262);
-    			attr_dev(p, "class", "verse-new-item svelte-kw30b8");
-    			attr_dev(p, "contenteditable", "true");
-    			if (/*newVerse*/ ctx[10] === void 0) add_render_callback(() => /*p_input_handler_1*/ ctx[62].call(p));
-    			add_location(p, file, 534, 6, 15360);
+    			attr(button, "class", "verse-add btn btn-success svelte-kw30b8");
+    			attr(button, "title", "Pridať nový verš");
+    			attr(input, "class", "form-control verse-new-id svelte-kw30b8");
+    			attr(input, "type", "text");
+    			attr(input, "placeholder", "id");
+    			attr(p, "class", "verse-new-item svelte-kw30b8");
+    			attr(p, "contenteditable", "true");
+    			if (/*newVerse*/ ctx[10] === void 0) add_render_callback(() => /*p_input_handler_1*/ ctx[51].call(p));
     		},
-    		m: function mount(target, anchor, remount) {
-    			insert_dev(target, button, anchor);
-    			insert_dev(target, t1, anchor);
-    			insert_dev(target, input, anchor);
+    		m(target, anchor) {
+    			insert(target, button, anchor);
+    			insert(target, t1, anchor);
+    			insert(target, input, anchor);
     			set_input_value(input, /*newId*/ ctx[9]);
-    			insert_dev(target, t2, anchor);
-    			insert_dev(target, p, anchor);
+    			insert(target, t2, anchor);
+    			insert(target, p, anchor);
 
     			if (/*newVerse*/ ctx[10] !== void 0) {
     				p.innerHTML = /*newVerse*/ ctx[10];
     			}
 
-    			if (remount) run_all(dispose);
+    			if (!mounted) {
+    				dispose = [
+    					listen(button, "click", /*addNewVerse*/ ctx[26]),
+    					listen(input, "input", /*input_input_handler*/ ctx[50]),
+    					listen(p, "input", /*p_input_handler_1*/ ctx[51])
+    				];
 
-    			dispose = [
-    				listen_dev(button, "click", /*addNewVerse*/ ctx[26], false, false, false),
-    				listen_dev(input, "input", /*input_input_handler*/ ctx[61]),
-    				listen_dev(p, "input", /*p_input_handler_1*/ ctx[62])
-    			];
+    				mounted = true;
+    			}
     		},
-    		p: function update(ctx, dirty) {
+    		p(ctx, dirty) {
     			if (dirty[0] & /*newId*/ 512 && input.value !== /*newId*/ ctx[9]) {
     				set_input_value(input, /*newId*/ ctx[9]);
     			}
@@ -1208,79 +1021,50 @@ var app = (function () {
     				p.innerHTML = /*newVerse*/ ctx[10];
     			}
     		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(button);
-    			if (detaching) detach_dev(t1);
-    			if (detaching) detach_dev(input);
-    			if (detaching) detach_dev(t2);
-    			if (detaching) detach_dev(p);
+    		d(detaching) {
+    			if (detaching) detach(button);
+    			if (detaching) detach(t1);
+    			if (detaching) detach(input);
+    			if (detaching) detach(t2);
+    			if (detaching) detach(p);
+    			mounted = false;
     			run_all(dispose);
     		}
     	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block_1.name,
-    		type: "if",
-    		source: "(532:4) {#if editing}",
-    		ctx
-    	});
-
-    	return block;
     }
 
     // (549:20) {:else}
     function create_else_block(ctx) {
     	let t;
 
-    	const block = {
-    		c: function create() {
+    	return {
+    		c() {
     			t = text("Zobraziť");
     		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, t, anchor);
+    		m(target, anchor) {
+    			insert(target, t, anchor);
     		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(t);
+    		d(detaching) {
+    			if (detaching) detach(t);
     		}
     	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_else_block.name,
-    		type: "else",
-    		source: "(549:20) {:else}",
-    		ctx
-    	});
-
-    	return block;
     }
 
     // (549:4) {#if $show}
     function create_if_block(ctx) {
     	let t;
 
-    	const block = {
-    		c: function create() {
+    	return {
+    		c() {
     			t = text("Skryť");
     		},
-    		m: function mount(target, anchor) {
-    			insert_dev(target, t, anchor);
+    		m(target, anchor) {
+    			insert(target, t, anchor);
     		},
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(t);
+    		d(detaching) {
+    			if (detaching) detach(t);
     		}
     	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_if_block.name,
-    		type: "if",
-    		source: "(549:4) {#if $show}",
-    		ctx
-    	});
-
-    	return block;
     }
 
     function create_fragment(ctx) {
@@ -1303,24 +1087,6 @@ var app = (function () {
     	let input1;
     	let t10;
     	let p2;
-    	let strong0;
-    	let br0;
-    	let t12;
-    	let strong1;
-    	let t14;
-    	let br1;
-    	let t15;
-    	let strong2;
-    	let t17;
-    	let br2;
-    	let t18;
-    	let strong3;
-    	let t20;
-    	let br3;
-    	let t21;
-    	let strong4;
-    	let t23;
-    	let br4;
     	let t24;
     	let div2;
     	let t25;
@@ -1355,9 +1121,9 @@ var app = (function () {
     	let button8;
     	let t41;
     	let button8_disabled_value;
+    	let mounted;
     	let dispose;
     	let each_value_3 = /*songsFiltered*/ ctx[1];
-    	validate_each_argument(each_value_3);
     	let each_blocks_1 = [];
 
     	for (let i = 0; i < each_value_3.length; i += 1) {
@@ -1365,7 +1131,6 @@ var app = (function () {
     	}
 
     	let each_value_2 = /*playlist*/ ctx[6];
-    	validate_each_argument(each_value_2);
     	let each_blocks = [];
 
     	for (let i = 0; i < each_value_2.length; i += 1) {
@@ -1375,10 +1140,10 @@ var app = (function () {
     	let each1_else = null;
 
     	if (!each_value_2.length) {
-    		each1_else = create_else_block_3(ctx);
+    		each1_else = create_else_block_3();
     	}
 
-    	let if_block0 = /*editing*/ ctx[4] && create_if_block_4(ctx);
+    	let if_block0 = /*editing*/ ctx[4] && create_if_block_4();
 
     	function select_block_type(ctx, dirty) {
     		if (/*editing*/ ctx[4]) return create_if_block_3;
@@ -1405,8 +1170,8 @@ var app = (function () {
     	let current_block_type_2 = select_block_type_2(ctx);
     	let if_block4 = current_block_type_2(ctx);
 
-    	const block = {
-    		c: function create() {
+    	return {
+    		c() {
     			div0 = element("div");
     			input0 = element("input");
     			t0 = space();
@@ -1430,29 +1195,17 @@ var app = (function () {
     			input1 = element("input");
     			t10 = space();
     			p2 = element("p");
-    			strong0 = element("strong");
-    			strong0.textContent = "Klávesové skratky:";
-    			br0 = element("br");
-    			t12 = space();
-    			strong1 = element("strong");
-    			strong1.textContent = "Šípky Hore - Dole:";
-    			t14 = text("\n    prepínanie medzi verša aktuálnej piesne.");
-    			br1 = element("br");
-    			t15 = space();
-    			strong2 = element("strong");
-    			strong2.textContent = "Šípky Vľavo - Vpravo:";
-    			t17 = text("\n    prepínanie medzi piesňami v playliste.");
-    			br2 = element("br");
-    			t18 = space();
-    			strong3 = element("strong");
-    			strong3.textContent = "Enter:";
-    			t20 = text("\n    Zobraziť/Skryť verš");
-    			br3 = element("br");
-    			t21 = space();
-    			strong4 = element("strong");
-    			strong4.textContent = "Ctrl+Enter:";
-    			t23 = text("\n    Pri úprave piesne vloží nový verš.");
-    			br4 = element("br");
+
+    			p2.innerHTML = `<strong>Klávesové skratky:</strong><br> 
+    <strong>Šípky Hore - Dole:</strong>
+    prepínanie medzi verša aktuálnej piesne.<br> 
+    <strong>Šípky Vľavo - Vpravo:</strong>
+    prepínanie medzi piesňami v playliste.<br> 
+    <strong>Enter:</strong>
+    Zobraziť/Skryť verš<br> 
+    <strong>Ctrl+Enter:</strong>
+    Pri úprave piesne vloží nový verš.<br>`;
+
     			t24 = space();
     			div2 = element("div");
 
@@ -1503,147 +1256,91 @@ var app = (function () {
     			t40 = space();
     			button8 = element("button");
     			t41 = text("Verš ↓");
-    			attr_dev(input0, "class", "form-control");
-    			attr_dev(input0, "type", "text");
-    			attr_dev(input0, "placeholder", "filter piesní");
-    			add_location(input0, file, 428, 2, 11102);
-    			attr_dev(button0, "type", "button");
-    			attr_dev(button0, "class", "form-control btn btn-secondary");
+    			attr(input0, "class", "form-control");
+    			attr(input0, "type", "text");
+    			attr(input0, "placeholder", "filter piesní");
+    			attr(button0, "type", "button");
+    			attr(button0, "class", "form-control btn btn-secondary");
     			set_style(button0, "max-width", "2rem");
     			set_style(button0, "padding", ".25rem");
-    			attr_dev(button0, "title", "Zrušiť filter");
-    			add_location(button0, file, 433, 2, 11294);
-    			attr_dev(button1, "type", "button");
-    			attr_dev(button1, "class", "form-control btn btn-secondary");
+    			attr(button0, "title", "Zrušiť filter");
+    			attr(button1, "type", "button");
+    			attr(button1, "class", "form-control btn btn-secondary");
     			set_style(button1, "max-width", "2rem");
     			set_style(button1, "padding", ".25rem");
-    			attr_dev(button1, "title", "Nastavenia");
-    			add_location(button1, file, 438, 2, 11505);
-    			attr_dev(div0, "class", "input-group");
+    			attr(button1, "title", "Nastavenia");
+    			attr(div0, "class", "input-group");
     			set_style(div0, "width", "100%");
     			set_style(div0, "display", "flex");
-    			add_location(div0, file, 427, 0, 11038);
     			option0.__value = "";
     			option0.value = option0.__value;
     			option0.selected = true;
-    			add_location(option0, file, 449, 6, 11817);
     			option1.__value = "simple-with-shadow";
     			option1.value = option1.__value;
-    			add_location(option1, file, 450, 6, 11869);
-    			if (/*$bodyclass*/ ctx[14] === void 0) add_render_callback(() => /*select_change_handler*/ ctx[45].call(select));
-    			add_location(select, file, 448, 4, 11778);
-    			add_location(p0, file, 446, 2, 11760);
-    			attr_dev(input1, "id", "songsUpload");
-    			attr_dev(input1, "type", "file");
-    			attr_dev(input1, "name", "files");
+    			if (/*$bodyclass*/ ctx[14] === void 0) add_render_callback(() => /*select_change_handler*/ ctx[34].call(select));
+    			attr(input1, "id", "songsUpload");
+    			attr(input1, "type", "file");
+    			attr(input1, "name", "files");
     			input1.multiple = true;
-    			add_location(input1, file, 455, 4, 12016);
-    			add_location(p1, file, 453, 2, 11956);
-    			add_location(strong0, file, 458, 4, 12116);
-    			add_location(br0, file, 458, 39, 12151);
-    			add_location(strong1, file, 459, 4, 12161);
-    			add_location(br1, file, 460, 44, 12241);
-    			add_location(strong2, file, 461, 4, 12251);
-    			add_location(br2, file, 462, 42, 12332);
-    			add_location(strong3, file, 463, 4, 12342);
-    			add_location(br3, file, 464, 23, 12389);
-    			add_location(strong4, file, 465, 4, 12399);
-    			add_location(br4, file, 466, 38, 12466);
-    			add_location(p2, file, 457, 2, 12108);
-    			attr_dev(div1, "class", "settings svelte-kw30b8");
+    			attr(div1, "class", "settings svelte-kw30b8");
     			toggle_class(div1, "show", /*settingsOpen*/ ctx[3]);
-    			add_location(div1, file, 445, 0, 11709);
-    			attr_dev(div2, "class", "songs-filter svelte-kw30b8");
+    			attr(div2, "class", "songs-filter svelte-kw30b8");
     			toggle_class(div2, "show", /*filterOpen*/ ctx[2]);
-    			add_location(div2, file, 471, 0, 12488);
-    			attr_dev(div3, "class", "playlist svelte-kw30b8");
-    			add_location(div3, file, 486, 2, 13163);
-    			attr_dev(button2, "class", "song-edit btn");
-    			attr_dev(button2, "title", "Upraviť");
+    			attr(div3, "class", "playlist svelte-kw30b8");
+    			attr(button2, "class", "song-edit btn");
+    			attr(button2, "title", "Upraviť");
     			toggle_class(button2, "btn-success", /*editing*/ ctx[4]);
-    			add_location(button2, file, 501, 4, 13635);
-    			attr_dev(button3, "class", "song-create btn svelte-kw30b8");
-    			attr_dev(button3, "title", "Vytvoriť novú pieseň");
-    			add_location(button3, file, 506, 4, 13820);
-    			attr_dev(div4, "class", "info-bar svelte-kw30b8");
-    			add_location(div4, file, 500, 2, 13608);
-    			attr_dev(div5, "class", "verses svelte-kw30b8");
-    			add_location(div5, file, 517, 2, 14530);
-    			attr_dev(div6, "class", "songs-control svelte-kw30b8");
+    			attr(button3, "class", "song-create btn svelte-kw30b8");
+    			attr(button3, "title", "Vytvoriť novú pieseň");
+    			attr(div4, "class", "info-bar svelte-kw30b8");
+    			attr(div5, "class", "verses svelte-kw30b8");
+    			attr(div6, "class", "songs-control svelte-kw30b8");
     			toggle_class(div6, "show", !/*filterOpen*/ ctx[2] && !/*settingsOpen*/ ctx[3]);
-    			add_location(div6, file, 485, 0, 13091);
-    			attr_dev(button4, "class", "btn btn-primary svelte-kw30b8");
+    			attr(button4, "class", "btn btn-primary svelte-kw30b8");
     			button4.disabled = button4_disabled_value = /*$curSongIndex*/ ctx[12] <= 0;
-    			add_location(button4, file, 540, 2, 15508);
-    			attr_dev(button5, "class", "btn btn-primary svelte-kw30b8");
+    			attr(button5, "class", "btn btn-primary svelte-kw30b8");
     			button5.disabled = button5_disabled_value = /*$curSongIndex*/ ctx[12] >= /*playlist*/ ctx[6].length - 1;
-    			add_location(button5, file, 543, 2, 15652);
-    			attr_dev(button6, "class", "control-button btn svelte-kw30b8");
+    			attr(button6, "class", "control-button btn svelte-kw30b8");
     			toggle_class(button6, "btn-danger", /*$show*/ ctx[13]);
     			toggle_class(button6, "btn-success", !/*$show*/ ctx[13]);
-    			add_location(button6, file, 547, 2, 15813);
-    			attr_dev(button7, "class", "btn btn-primary svelte-kw30b8");
+    			attr(button7, "class", "btn btn-primary svelte-kw30b8");
     			button7.disabled = button7_disabled_value = /*$curVerseIndex*/ ctx[11] <= 0;
-    			add_location(button7, file, 551, 2, 15979);
-    			attr_dev(button8, "class", "btn btn-primary svelte-kw30b8");
+    			attr(button8, "class", "btn btn-primary svelte-kw30b8");
     			button8.disabled = button8_disabled_value = /*$curVerseIndex*/ ctx[11] >= /*curVerses*/ ctx[8].length - 1;
-    			add_location(button8, file, 554, 2, 16148);
-    			attr_dev(div7, "class", "bottom-buttons btn-group svelte-kw30b8");
-    			add_location(div7, file, 539, 0, 15467);
+    			attr(div7, "class", "bottom-buttons btn-group svelte-kw30b8");
     		},
-    		l: function claim(nodes) {
-    			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
-    		},
-    		m: function mount(target, anchor, remount) {
-    			insert_dev(target, div0, anchor);
-    			append_dev(div0, input0);
+    		m(target, anchor) {
+    			insert(target, div0, anchor);
+    			append(div0, input0);
     			set_input_value(input0, /*songFilter*/ ctx[0]);
-    			append_dev(div0, t0);
-    			append_dev(div0, button0);
-    			append_dev(div0, t2);
-    			append_dev(div0, button1);
-    			insert_dev(target, t4, anchor);
-    			insert_dev(target, div1, anchor);
-    			append_dev(div1, p0);
-    			append_dev(p0, t5);
-    			append_dev(p0, select);
-    			append_dev(select, option0);
-    			append_dev(select, option1);
+    			append(div0, t0);
+    			append(div0, button0);
+    			append(div0, t2);
+    			append(div0, button1);
+    			insert(target, t4, anchor);
+    			insert(target, div1, anchor);
+    			append(div1, p0);
+    			append(p0, t5);
+    			append(p0, select);
+    			append(select, option0);
+    			append(select, option1);
     			select_option(select, /*$bodyclass*/ ctx[14]);
-    			append_dev(div1, t8);
-    			append_dev(div1, p1);
-    			append_dev(p1, t9);
-    			append_dev(p1, input1);
-    			append_dev(div1, t10);
-    			append_dev(div1, p2);
-    			append_dev(p2, strong0);
-    			append_dev(p2, br0);
-    			append_dev(p2, t12);
-    			append_dev(p2, strong1);
-    			append_dev(p2, t14);
-    			append_dev(p2, br1);
-    			append_dev(p2, t15);
-    			append_dev(p2, strong2);
-    			append_dev(p2, t17);
-    			append_dev(p2, br2);
-    			append_dev(p2, t18);
-    			append_dev(p2, strong3);
-    			append_dev(p2, t20);
-    			append_dev(p2, br3);
-    			append_dev(p2, t21);
-    			append_dev(p2, strong4);
-    			append_dev(p2, t23);
-    			append_dev(p2, br4);
-    			insert_dev(target, t24, anchor);
-    			insert_dev(target, div2, anchor);
+    			append(div1, t8);
+    			append(div1, p1);
+    			append(p1, t9);
+    			append(p1, input1);
+    			append(div1, t10);
+    			append(div1, p2);
+    			insert(target, t24, anchor);
+    			insert(target, div2, anchor);
 
     			for (let i = 0; i < each_blocks_1.length; i += 1) {
     				each_blocks_1[i].m(div2, null);
     			}
 
-    			insert_dev(target, t25, anchor);
-    			insert_dev(target, div6, anchor);
-    			append_dev(div6, div3);
+    			insert(target, t25, anchor);
+    			insert(target, div6, anchor);
+    			append(div6, div3);
 
     			for (let i = 0; i < each_blocks.length; i += 1) {
     				each_blocks[i].m(div3, null);
@@ -1653,56 +1350,59 @@ var app = (function () {
     				each1_else.m(div3, null);
     			}
 
-    			append_dev(div6, t26);
-    			append_dev(div6, div4);
-    			append_dev(div4, button2);
-    			append_dev(button2, t27);
+    			append(div6, t26);
+    			append(div6, div4);
+    			append(div4, button2);
+    			append(button2, t27);
     			if (if_block0) if_block0.m(button2, null);
-    			append_dev(div4, t28);
-    			append_dev(div4, button3);
-    			append_dev(div4, t30);
+    			append(div4, t28);
+    			append(div4, button3);
+    			append(div4, t30);
     			if_block1.m(div4, null);
-    			append_dev(div6, t31);
-    			append_dev(div6, div5);
+    			append(div6, t31);
+    			append(div6, div5);
     			if_block2.m(div5, null);
-    			append_dev(div5, t32);
+    			append(div5, t32);
     			if (if_block3) if_block3.m(div5, null);
-    			insert_dev(target, t33, anchor);
-    			insert_dev(target, div7, anchor);
-    			append_dev(div7, button4);
-    			append_dev(button4, t34);
-    			append_dev(div7, t35);
-    			append_dev(div7, button5);
-    			append_dev(button5, t36);
-    			append_dev(div7, t37);
-    			append_dev(div7, button6);
+    			insert(target, t33, anchor);
+    			insert(target, div7, anchor);
+    			append(div7, button4);
+    			append(button4, t34);
+    			append(div7, t35);
+    			append(div7, button5);
+    			append(button5, t36);
+    			append(div7, t37);
+    			append(div7, button6);
     			if_block4.m(button6, null);
-    			append_dev(div7, t38);
-    			append_dev(div7, button7);
-    			append_dev(button7, t39);
-    			append_dev(div7, t40);
-    			append_dev(div7, button8);
-    			append_dev(button8, t41);
-    			if (remount) run_all(dispose);
+    			append(div7, t38);
+    			append(div7, button7);
+    			append(button7, t39);
+    			append(div7, t40);
+    			append(div7, button8);
+    			append(button8, t41);
 
-    			dispose = [
-    				listen_dev(input0, "input", /*input0_input_handler*/ ctx[40]),
-    				listen_dev(input0, "input", /*input_handler*/ ctx[41], false, false, false),
-    				listen_dev(input0, "click", /*click_handler*/ ctx[42], false, false, false),
-    				listen_dev(button0, "click", /*click_handler_1*/ ctx[43], false, false, false),
-    				listen_dev(button1, "click", /*click_handler_2*/ ctx[44], false, false, false),
-    				listen_dev(select, "change", /*select_change_handler*/ ctx[45]),
-    				listen_dev(input1, "change", /*importSongs*/ ctx[28], false, false, false),
-    				listen_dev(button2, "click", /*click_handler_9*/ ctx[52], false, false, false),
-    				listen_dev(button3, "click", /*addNewSong*/ ctx[22], false, false, false),
-    				listen_dev(button4, "click", /*click_handler_14*/ ctx[63], false, false, false),
-    				listen_dev(button5, "click", /*click_handler_15*/ ctx[64], false, false, false),
-    				listen_dev(button6, "click", /*toggleShow*/ ctx[27], false, false, false),
-    				listen_dev(button7, "click", /*click_handler_16*/ ctx[65], false, false, false),
-    				listen_dev(button8, "click", /*click_handler_17*/ ctx[66], false, false, false)
-    			];
+    			if (!mounted) {
+    				dispose = [
+    					listen(input0, "input", /*input0_input_handler*/ ctx[29]),
+    					listen(input0, "input", /*input_handler*/ ctx[30]),
+    					listen(input0, "click", /*click_handler*/ ctx[31]),
+    					listen(button0, "click", /*click_handler_1*/ ctx[32]),
+    					listen(button1, "click", /*click_handler_2*/ ctx[33]),
+    					listen(select, "change", /*select_change_handler*/ ctx[34]),
+    					listen(input1, "change", /*importSongs*/ ctx[28]),
+    					listen(button2, "click", /*click_handler_9*/ ctx[41]),
+    					listen(button3, "click", /*addNewSong*/ ctx[22]),
+    					listen(button4, "click", /*click_handler_14*/ ctx[52]),
+    					listen(button5, "click", /*click_handler_15*/ ctx[53]),
+    					listen(button6, "click", /*toggleShow*/ ctx[27]),
+    					listen(button7, "click", /*click_handler_16*/ ctx[54]),
+    					listen(button8, "click", /*click_handler_17*/ ctx[55])
+    				];
+
+    				mounted = true;
+    			}
     		},
-    		p: function update(ctx, dirty) {
+    		p(ctx, dirty) {
     			if (dirty[0] & /*songFilter*/ 1 && input0.value !== /*songFilter*/ ctx[0]) {
     				set_input_value(input0, /*songFilter*/ ctx[0]);
     			}
@@ -1717,7 +1417,6 @@ var app = (function () {
 
     			if (dirty[0] & /*removeSong, songsFiltered, toggleEdit, filterOpen, addToPlaylist, curSong*/ 26214534) {
     				each_value_3 = /*songsFiltered*/ ctx[1];
-    				validate_each_argument(each_value_3);
     				let i;
 
     				for (i = 0; i < each_value_3.length; i += 1) {
@@ -1745,7 +1444,6 @@ var app = (function () {
 
     			if (dirty[0] & /*removePlaylistItem, $curSongIndex, playlist*/ 2101312) {
     				each_value_2 = /*playlist*/ ctx[6];
-    				validate_each_argument(each_value_2);
     				let i;
 
     				for (i = 0; i < each_value_2.length; i += 1) {
@@ -1772,15 +1470,15 @@ var app = (function () {
     						each1_else = null;
     					}
     				} else if (!each1_else) {
-    					each1_else = create_else_block_3(ctx);
+    					each1_else = create_else_block_3();
     					each1_else.c();
     					each1_else.m(div3, null);
     				}
     			}
 
     			if (/*editing*/ ctx[4]) {
-    				if (!if_block0) {
-    					if_block0 = create_if_block_4(ctx);
+    				if (if_block0) ; else {
+    					if_block0 = create_if_block_4();
     					if_block0.c();
     					if_block0.m(button2, null);
     				}
@@ -1835,11 +1533,11 @@ var app = (function () {
     			}
 
     			if (dirty[0] & /*$curSongIndex*/ 4096 && button4_disabled_value !== (button4_disabled_value = /*$curSongIndex*/ ctx[12] <= 0)) {
-    				prop_dev(button4, "disabled", button4_disabled_value);
+    				button4.disabled = button4_disabled_value;
     			}
 
     			if (dirty[0] & /*$curSongIndex, playlist*/ 4160 && button5_disabled_value !== (button5_disabled_value = /*$curSongIndex*/ ctx[12] >= /*playlist*/ ctx[6].length - 1)) {
-    				prop_dev(button5, "disabled", button5_disabled_value);
+    				button5.disabled = button5_disabled_value;
     			}
 
     			if (current_block_type_2 !== (current_block_type_2 = select_block_type_2(ctx))) {
@@ -1861,46 +1559,37 @@ var app = (function () {
     			}
 
     			if (dirty[0] & /*$curVerseIndex*/ 2048 && button7_disabled_value !== (button7_disabled_value = /*$curVerseIndex*/ ctx[11] <= 0)) {
-    				prop_dev(button7, "disabled", button7_disabled_value);
+    				button7.disabled = button7_disabled_value;
     			}
 
     			if (dirty[0] & /*$curVerseIndex, curVerses*/ 2304 && button8_disabled_value !== (button8_disabled_value = /*$curVerseIndex*/ ctx[11] >= /*curVerses*/ ctx[8].length - 1)) {
-    				prop_dev(button8, "disabled", button8_disabled_value);
+    				button8.disabled = button8_disabled_value;
     			}
     		},
     		i: noop,
     		o: noop,
-    		d: function destroy(detaching) {
-    			if (detaching) detach_dev(div0);
-    			if (detaching) detach_dev(t4);
-    			if (detaching) detach_dev(div1);
-    			if (detaching) detach_dev(t24);
-    			if (detaching) detach_dev(div2);
+    		d(detaching) {
+    			if (detaching) detach(div0);
+    			if (detaching) detach(t4);
+    			if (detaching) detach(div1);
+    			if (detaching) detach(t24);
+    			if (detaching) detach(div2);
     			destroy_each(each_blocks_1, detaching);
-    			if (detaching) detach_dev(t25);
-    			if (detaching) detach_dev(div6);
+    			if (detaching) detach(t25);
+    			if (detaching) detach(div6);
     			destroy_each(each_blocks, detaching);
     			if (each1_else) each1_else.d();
     			if (if_block0) if_block0.d();
     			if_block1.d();
     			if_block2.d();
     			if (if_block3) if_block3.d();
-    			if (detaching) detach_dev(t33);
-    			if (detaching) detach_dev(div7);
+    			if (detaching) detach(t33);
+    			if (detaching) detach(div7);
     			if_block4.d();
+    			mounted = false;
     			run_all(dispose);
     		}
     	};
-
-    	dispatch_dev("SvelteRegisterBlock", {
-    		block,
-    		id: create_fragment.name,
-    		type: "component",
-    		source: "",
-    		ctx
-    	});
-
-    	return block;
     }
 
     function scrollToVerse(i) {
@@ -1966,19 +1655,14 @@ var app = (function () {
     	/* Synced variables */
     	let show = writableGun(overlay.get("show"), false);
 
-    	validate_store(show, "show");
     	component_subscribe($$self, show, value => $$invalidate(13, $show = value));
     	let line1 = writableGun(overlay.get("line1"), "");
-    	validate_store(line1, "line1");
-    	component_subscribe($$self, line1, value => $$invalidate(31, $line1 = value));
+    	component_subscribe($$self, line1, value => $$invalidate(58, $line1 = value));
     	let bodyclass = writableGun(overlay.get("bodyclass"), "");
-    	validate_store(bodyclass, "bodyclass");
     	component_subscribe($$self, bodyclass, value => $$invalidate(14, $bodyclass = value));
     	let curSongIndex = writableGun(overlay.get("curSongIndex"), 0);
-    	validate_store(curSongIndex, "curSongIndex");
     	component_subscribe($$self, curSongIndex, value => $$invalidate(12, $curSongIndex = value));
     	let curVerseIndex = writableGun(overlay.get("curVerseIndex"), 0);
-    	validate_store(curVerseIndex, "curVerseIndex");
     	component_subscribe($$self, curVerseIndex, value => $$invalidate(11, $curVerseIndex = value));
     	let songsGun = overlay.get("songs");
 
@@ -1989,7 +1673,7 @@ var app = (function () {
     			if (data === null) {
     				delete songs[key];
     				return;
-    			} else $$invalidate(29, songs[key] = data, songs);
+    			} else $$invalidate(56, songs[key] = data, songs);
     		}); /* Retreive verses immediately
     songsGun
       .get(Gun.node.soul(data))
@@ -2183,15 +1867,6 @@ var app = (function () {
     		}
     	}
 
-    	const writable_props = [];
-
-    	Object_1.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console_1.warn(`<App> was created with unknown prop '${key}'`);
-    	});
-
-    	let { $$slots = {}, $$scope } = $$props;
-    	validate_slots("App", $$slots, []);
-
     	function input0_input_handler() {
     		songFilter = this.value;
     		$$invalidate(0, songFilter);
@@ -2303,83 +1978,6 @@ var app = (function () {
     		scrollToVerse($curVerseIndex);
     	};
 
-    	$$self.$capture_state = () => ({
-    		onMount,
-    		onDestroy,
-    		writable,
-    		writableGun,
-    		songs,
-    		songsSorted,
-    		songFilter,
-    		songsFiltered,
-    		filterOpen,
-    		settingsOpen,
-    		editing,
-    		editingSong,
-    		playlist,
-    		gun,
-    		overlay,
-    		show,
-    		line1,
-    		bodyclass,
-    		curSongIndex,
-    		curVerseIndex,
-    		songsGun,
-    		refreshSongsDb,
-    		playlistGun,
-    		curSong,
-    		curVerses,
-    		newId,
-    		newVerse,
-    		setCurVerses,
-    		matchesSong,
-    		addToPlaylist,
-    		removePlaylistItem,
-    		addNewSong,
-    		removeSong,
-    		toggleEdit,
-    		removeVerse,
-    		addNewVerse,
-    		generateNewId,
-    		scrollToVerse,
-    		toggleShow,
-    		importSongs,
-    		$curVerseIndex,
-    		$curSongIndex,
-    		$show,
-    		$line1,
-    		$bodyclass
-    	});
-
-    	$$self.$inject_state = $$props => {
-    		if ("songs" in $$props) $$invalidate(29, songs = $$props.songs);
-    		if ("songsSorted" in $$props) $$invalidate(30, songsSorted = $$props.songsSorted);
-    		if ("songFilter" in $$props) $$invalidate(0, songFilter = $$props.songFilter);
-    		if ("songsFiltered" in $$props) $$invalidate(1, songsFiltered = $$props.songsFiltered);
-    		if ("filterOpen" in $$props) $$invalidate(2, filterOpen = $$props.filterOpen);
-    		if ("settingsOpen" in $$props) $$invalidate(3, settingsOpen = $$props.settingsOpen);
-    		if ("editing" in $$props) $$invalidate(4, editing = $$props.editing);
-    		if ("editingSong" in $$props) $$invalidate(5, editingSong = $$props.editingSong);
-    		if ("playlist" in $$props) $$invalidate(6, playlist = $$props.playlist);
-    		if ("gun" in $$props) gun = $$props.gun;
-    		if ("overlay" in $$props) overlay = $$props.overlay;
-    		if ("show" in $$props) $$invalidate(15, show = $$props.show);
-    		if ("line1" in $$props) $$invalidate(16, line1 = $$props.line1);
-    		if ("bodyclass" in $$props) $$invalidate(17, bodyclass = $$props.bodyclass);
-    		if ("curSongIndex" in $$props) $$invalidate(18, curSongIndex = $$props.curSongIndex);
-    		if ("curVerseIndex" in $$props) $$invalidate(19, curVerseIndex = $$props.curVerseIndex);
-    		if ("songsGun" in $$props) songsGun = $$props.songsGun;
-    		if ("playlistGun" in $$props) playlistGun = $$props.playlistGun;
-    		if ("curSong" in $$props) $$invalidate(7, curSong = $$props.curSong);
-    		if ("curVerses" in $$props) $$invalidate(8, curVerses = $$props.curVerses);
-    		if ("newId" in $$props) $$invalidate(9, newId = $$props.newId);
-    		if ("newVerse" in $$props) $$invalidate(10, newVerse = $$props.newVerse);
-    	};
-
-    	if ($$props && "$$inject" in $$props) {
-    		$$self.$inject_state($$props.$$inject);
-    	}
-
     	$$self.$$.update = () => {
     		if ($$self.$$.dirty[0] & /*playlist, $curSongIndex*/ 4160) {
     			 $$invalidate(7, curSong = playlist[$curSongIndex] || {
@@ -2398,11 +1996,11 @@ var app = (function () {
     			 set_store_value(line1, $line1 = curVerses[$curVerseIndex] || "");
     		}
 
-    		if ($$self.$$.dirty[0] & /*songs*/ 536870912) {
-    			 $$invalidate(30, songsSorted = Object.values(songs).sort((a, b) => (a.title || "").replace(/\d+/g, s => ("0000" + parseInt(s)).slice(-4)).toLowerCase() > (b.title || "").replace(/\d+/g, s => ("0000" + parseInt(s)).slice(-4)).toLowerCase()));
+    		if ($$self.$$.dirty[1] & /*songs*/ 33554432) {
+    			 $$invalidate(57, songsSorted = Object.values(songs).sort((a, b) => (a.title || "").replace(/\d+/g, s => ("0000" + parseInt(s)).slice(-4)).toLowerCase() > (b.title || "").replace(/\d+/g, s => ("0000" + parseInt(s)).slice(-4)).toLowerCase()));
     		}
 
-    		if ($$self.$$.dirty[0] & /*songFilter, songsSorted*/ 1073741825) {
+    		if ($$self.$$.dirty[0] & /*songFilter*/ 1 | $$self.$$.dirty[1] & /*songsSorted*/ 67108864) {
     			 $$invalidate(1, songsFiltered = songFilter
     			? songsSorted.filter(matchesSong)
     			: songsSorted);
@@ -2439,17 +2037,6 @@ var app = (function () {
     		addNewVerse,
     		toggleShow,
     		importSongs,
-    		songs,
-    		songsSorted,
-    		$line1,
-    		gun,
-    		overlay,
-    		songsGun,
-    		refreshSongsDb,
-    		playlistGun,
-    		setCurVerses,
-    		matchesSong,
-    		generateNewId,
     		input0_input_handler,
     		input_handler,
     		click_handler,
@@ -2480,17 +2067,10 @@ var app = (function () {
     	];
     }
 
-    class App extends SvelteComponentDev {
+    class App extends SvelteComponent {
     	constructor(options) {
-    		super(options);
+    		super();
     		init(this, options, instance, create_fragment, safe_not_equal, {}, [-1, -1, -1]);
-
-    		dispatch_dev("SvelteRegisterComponent", {
-    			component: this,
-    			tagName: "App",
-    			options,
-    			id: create_fragment.name
-    		});
     	}
     }
 
