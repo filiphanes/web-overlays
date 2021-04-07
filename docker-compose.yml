@@ -1,0 +1,13 @@
+version: "2"
+services:
+  gun:
+    # image: "node:current-alpine"
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    working_dir: /app
+    environment:
+      - NODE_ENV=production
+    expose:
+      - "3000"
+    command: "node server.js"
