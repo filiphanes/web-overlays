@@ -18,6 +18,7 @@ function writableGun(gunData, value) {
     });
 
     function set(newval) {
+        console.debug('gun.put', newval);
         gunData.put(newval);
     }
     function update(fn) {

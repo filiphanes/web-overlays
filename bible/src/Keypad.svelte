@@ -7,27 +7,9 @@
   const dispatch = createEventDispatcher();
 
   const select = num => () => {value = Math.min(+value * 10 + num, max||99999999)};
-  const decrement = () => {value = Math.max(1, +value - 1)};
-  const increment = () => {value = Math.min(+value + 1, max||99999999)};
   const clear = () => {value = ""};
   const backspace = () => {value = Math.floor(+value / 10) || ''};
 </script>
-
-<style>
-  .keypad {
-    display: grid;
-    grid-template-columns: repeat(3, 2.8rem);
-    grid-template-rows: repeat(5, 2.8rem);
-    grid-gap: 0.2rem;
-    margin: 0 0 0.5rem 0;
-  }
-
-  button {
-    margin: 0;
-    line-height: 2rem;
-    width: 2.8rem;
-  }
-</style>
 
 <div class="keypad">
   <button class="btn btn-primary" on:click={select(1)}>1</button>
@@ -45,7 +27,4 @@
   <button class="btn btn-primary" on:click={backspace} disabled={!value}>←</button>
   <button class="btn btn-primary" on:click={select(0)}>0</button>
   <button class="btn btn-primary" on:click={clear} disabled={!value} >C</button>
-
-  <button class="btn btn-primary" on:click={decrement} disabled={value <= 1}>-1</button>
-  <button class="btn btn-primary" on:click={increment} disabled={value == max}>+1</button>
 </div>

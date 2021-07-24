@@ -1,3 +1,5 @@
+
+(function(l, r) { if (!l || l.getElementById('livereloadscript')) return; r = l.createElement('script'); r.async = 1; r.src = '//' + (self.location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1'; r.id = 'livereloadscript'; l.getElementsByTagName('head')[0].appendChild(r) })(self.document);
 var app = (function () {
     'use strict';
 
@@ -44,7 +46,6 @@ var app = (function () {
         store.set(value);
         return ret;
     }
-
     function append(target, node) {
         target.appendChild(node);
     }
@@ -104,9 +105,9 @@ var app = (function () {
     function toggle_class(element, name, toggle) {
         element.classList[toggle ? 'add' : 'remove'](name);
     }
-    function custom_event(type, detail) {
+    function custom_event(type, detail, bubbles = false) {
         const e = document.createEvent('CustomEvent');
-        e.initCustomEvent(type, false, false, detail);
+        e.initCustomEvent(type, bubbles, false, detail);
         return e;
     }
 
@@ -116,7 +117,7 @@ var app = (function () {
     }
     function get_current_component() {
         if (!current_component)
-            throw new Error(`Function called outside component initialization`);
+            throw new Error('Function called outside component initialization');
         return current_component;
     }
     function onMount(fn) {
@@ -247,22 +248,24 @@ var app = (function () {
     function create_component(block) {
         block && block.c();
     }
-    function mount_component(component, target, anchor) {
+    function mount_component(component, target, anchor, customElement) {
         const { fragment, on_mount, on_destroy, after_update } = component.$$;
         fragment && fragment.m(target, anchor);
-        // onMount happens before the initial afterUpdate
-        add_render_callback(() => {
-            const new_on_destroy = on_mount.map(run).filter(is_function);
-            if (on_destroy) {
-                on_destroy.push(...new_on_destroy);
-            }
-            else {
-                // Edge case - component was destroyed immediately,
-                // most likely as a result of a binding initialising
-                run_all(new_on_destroy);
-            }
-            component.$$.on_mount = [];
-        });
+        if (!customElement) {
+            // onMount happens before the initial afterUpdate
+            add_render_callback(() => {
+                const new_on_destroy = on_mount.map(run).filter(is_function);
+                if (on_destroy) {
+                    on_destroy.push(...new_on_destroy);
+                }
+                else {
+                    // Edge case - component was destroyed immediately,
+                    // most likely as a result of a binding initialising
+                    run_all(new_on_destroy);
+                }
+                component.$$.on_mount = [];
+            });
+        }
         after_update.forEach(add_render_callback);
     }
     function destroy_component(component, detaching) {
@@ -284,10 +287,9 @@ var app = (function () {
         }
         component.$$.dirty[(i / 31) | 0] |= (1 << (i % 31));
     }
-    function init(component, options, instance, create_fragment, not_equal, props, dirty = [-1]) {
+    function init(component, options, instance, create_fragment, not_equal, props, append_styles, dirty = [-1]) {
         const parent_component = current_component;
         set_current_component(component);
-        const prop_values = options.props || {};
         const $$ = component.$$ = {
             fragment: null,
             ctx: null,
@@ -299,17 +301,20 @@ var app = (function () {
             // lifecycle
             on_mount: [],
             on_destroy: [],
+            on_disconnect: [],
             before_update: [],
             after_update: [],
-            context: new Map(parent_component ? parent_component.$$.context : []),
+            context: new Map(parent_component ? parent_component.$$.context : options.context || []),
             // everything else
             callbacks: blank_object(),
             dirty,
-            skip_bound: false
+            skip_bound: false,
+            root: options.target || parent_component.$$.root
         };
+        append_styles && append_styles($$.root);
         let ready = false;
         $$.ctx = instance
-            ? instance(component, prop_values, (i, ret, ...rest) => {
+            ? instance(component, options.props || {}, (i, ret, ...rest) => {
                 const value = rest.length ? rest[0] : ret;
                 if ($$.ctx && not_equal($$.ctx[i], $$.ctx[i] = value)) {
                     if (!$$.skip_bound && $$.bound[i])
@@ -338,11 +343,14 @@ var app = (function () {
             }
             if (options.intro)
                 transition_in(component.$$.fragment);
-            mount_component(component, options.target, options.anchor);
+            mount_component(component, options.target, options.anchor, options.customElement);
             flush();
         }
         set_current_component(parent_component);
     }
+    /**
+     * Base class for Svelte components. Used when dev=false.
+     */
     class SvelteComponent {
         $destroy() {
             destroy_component(this, 1);
@@ -367,49 +375,49 @@ var app = (function () {
     }
 
     function dispatch_dev(type, detail) {
-        document.dispatchEvent(custom_event(type, Object.assign({ version: '3.29.0' }, detail)));
+        document.dispatchEvent(custom_event(type, Object.assign({ version: '3.40.1' }, detail), true));
     }
     function append_dev(target, node) {
-        dispatch_dev("SvelteDOMInsert", { target, node });
+        dispatch_dev('SvelteDOMInsert', { target, node });
         append(target, node);
     }
     function insert_dev(target, node, anchor) {
-        dispatch_dev("SvelteDOMInsert", { target, node, anchor });
+        dispatch_dev('SvelteDOMInsert', { target, node, anchor });
         insert(target, node, anchor);
     }
     function detach_dev(node) {
-        dispatch_dev("SvelteDOMRemove", { node });
+        dispatch_dev('SvelteDOMRemove', { node });
         detach(node);
     }
     function listen_dev(node, event, handler, options, has_prevent_default, has_stop_propagation) {
-        const modifiers = options === true ? ["capture"] : options ? Array.from(Object.keys(options)) : [];
+        const modifiers = options === true ? ['capture'] : options ? Array.from(Object.keys(options)) : [];
         if (has_prevent_default)
             modifiers.push('preventDefault');
         if (has_stop_propagation)
             modifiers.push('stopPropagation');
-        dispatch_dev("SvelteDOMAddEventListener", { node, event, handler, modifiers });
+        dispatch_dev('SvelteDOMAddEventListener', { node, event, handler, modifiers });
         const dispose = listen(node, event, handler, options);
         return () => {
-            dispatch_dev("SvelteDOMRemoveEventListener", { node, event, handler, modifiers });
+            dispatch_dev('SvelteDOMRemoveEventListener', { node, event, handler, modifiers });
             dispose();
         };
     }
     function attr_dev(node, attribute, value) {
         attr(node, attribute, value);
         if (value == null)
-            dispatch_dev("SvelteDOMRemoveAttribute", { node, attribute });
+            dispatch_dev('SvelteDOMRemoveAttribute', { node, attribute });
         else
-            dispatch_dev("SvelteDOMSetAttribute", { node, attribute, value });
+            dispatch_dev('SvelteDOMSetAttribute', { node, attribute, value });
     }
     function prop_dev(node, property, value) {
         node[property] = value;
-        dispatch_dev("SvelteDOMSetProperty", { node, property, value });
+        dispatch_dev('SvelteDOMSetProperty', { node, property, value });
     }
     function set_data_dev(text, data) {
         data = '' + data;
         if (text.wholeText === data)
             return;
-        dispatch_dev("SvelteDOMSetData", { node: text, data });
+        dispatch_dev('SvelteDOMSetData', { node: text, data });
         text.data = data;
     }
     function validate_each_argument(arg) {
@@ -428,27 +436,30 @@ var app = (function () {
             }
         }
     }
+    /**
+     * Base class for Svelte components with some minor dev-enhancements. Used when dev=true.
+     */
     class SvelteComponentDev extends SvelteComponent {
         constructor(options) {
             if (!options || (!options.target && !options.$$inline)) {
-                throw new Error(`'target' is a required option`);
+                throw new Error("'target' is a required option");
             }
             super();
         }
         $destroy() {
             super.$destroy();
             this.$destroy = () => {
-                console.warn(`Component was already destroyed`); // eslint-disable-line no-console
+                console.warn('Component was already destroyed'); // eslint-disable-line no-console
             };
         }
         $capture_state() { }
         $inject_state() { }
     }
 
-    /* src/Keypad.svelte generated by Svelte v3.29.0 */
-    const file = "src/Keypad.svelte";
+    /* src/Keypad.svelte generated by Svelte v3.40.1 */
+    const file$1 = "src/Keypad.svelte";
 
-    function create_fragment(ctx) {
+    function create_fragment$1(ctx) {
     	let div;
     	let button0;
     	let t1;
@@ -477,14 +488,6 @@ var app = (function () {
     	let button11;
     	let t22;
     	let button11_disabled_value;
-    	let t23;
-    	let button12;
-    	let t24;
-    	let button12_disabled_value;
-    	let t25;
-    	let button13;
-    	let t26;
-    	let button13_disabled_value;
     	let mounted;
     	let dispose;
 
@@ -526,46 +529,34 @@ var app = (function () {
     			t21 = space();
     			button11 = element("button");
     			t22 = text("C");
-    			t23 = space();
-    			button12 = element("button");
-    			t24 = text("-1");
-    			t25 = space();
-    			button13 = element("button");
-    			t26 = text("+1");
-    			attr_dev(button0, "class", "btn btn-primary svelte-1bz6mfx");
-    			add_location(button0, file, 32, 2, 778);
-    			attr_dev(button1, "class", "btn btn-primary svelte-1bz6mfx");
-    			add_location(button1, file, 33, 2, 844);
-    			attr_dev(button2, "class", "btn btn-primary svelte-1bz6mfx");
-    			add_location(button2, file, 34, 2, 910);
-    			attr_dev(button3, "class", "btn btn-primary svelte-1bz6mfx");
-    			add_location(button3, file, 36, 2, 977);
-    			attr_dev(button4, "class", "btn btn-primary svelte-1bz6mfx");
-    			add_location(button4, file, 37, 2, 1043);
-    			attr_dev(button5, "class", "btn btn-primary svelte-1bz6mfx");
-    			add_location(button5, file, 38, 2, 1109);
-    			attr_dev(button6, "class", "btn btn-primary svelte-1bz6mfx");
-    			add_location(button6, file, 40, 2, 1176);
-    			attr_dev(button7, "class", "btn btn-primary svelte-1bz6mfx");
-    			add_location(button7, file, 41, 2, 1242);
-    			attr_dev(button8, "class", "btn btn-primary svelte-1bz6mfx");
-    			add_location(button8, file, 42, 2, 1308);
-    			attr_dev(button9, "class", "btn btn-primary svelte-1bz6mfx");
+    			attr_dev(button0, "class", "btn btn-primary");
+    			add_location(button0, file$1, 14, 2, 381);
+    			attr_dev(button1, "class", "btn btn-primary");
+    			add_location(button1, file$1, 15, 2, 447);
+    			attr_dev(button2, "class", "btn btn-primary");
+    			add_location(button2, file$1, 16, 2, 513);
+    			attr_dev(button3, "class", "btn btn-primary");
+    			add_location(button3, file$1, 18, 2, 580);
+    			attr_dev(button4, "class", "btn btn-primary");
+    			add_location(button4, file$1, 19, 2, 646);
+    			attr_dev(button5, "class", "btn btn-primary");
+    			add_location(button5, file$1, 20, 2, 712);
+    			attr_dev(button6, "class", "btn btn-primary");
+    			add_location(button6, file$1, 22, 2, 779);
+    			attr_dev(button7, "class", "btn btn-primary");
+    			add_location(button7, file$1, 23, 2, 845);
+    			attr_dev(button8, "class", "btn btn-primary");
+    			add_location(button8, file$1, 24, 2, 911);
+    			attr_dev(button9, "class", "btn btn-primary");
     			button9.disabled = button9_disabled_value = !/*value*/ ctx[0];
-    			add_location(button9, file, 44, 2, 1375);
-    			attr_dev(button10, "class", "btn btn-primary svelte-1bz6mfx");
-    			add_location(button10, file, 45, 2, 1459);
-    			attr_dev(button11, "class", "btn btn-primary svelte-1bz6mfx");
+    			add_location(button9, file$1, 26, 2, 978);
+    			attr_dev(button10, "class", "btn btn-primary");
+    			add_location(button10, file$1, 27, 2, 1062);
+    			attr_dev(button11, "class", "btn btn-primary");
     			button11.disabled = button11_disabled_value = !/*value*/ ctx[0];
-    			add_location(button11, file, 46, 2, 1525);
-    			attr_dev(button12, "class", "btn btn-primary svelte-1bz6mfx");
-    			button12.disabled = button12_disabled_value = /*value*/ ctx[0] <= 1;
-    			add_location(button12, file, 48, 2, 1607);
-    			attr_dev(button13, "class", "btn btn-primary svelte-1bz6mfx");
-    			button13.disabled = button13_disabled_value = /*value*/ ctx[0] == /*max*/ ctx[1];
-    			add_location(button13, file, 49, 2, 1696);
-    			attr_dev(div, "class", "keypad svelte-1bz6mfx");
-    			add_location(div, file, 31, 0, 755);
+    			add_location(button11, file$1, 28, 2, 1128);
+    			attr_dev(div, "class", "keypad");
+    			add_location(div, file$1, 13, 0, 358);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -597,29 +588,21 @@ var app = (function () {
     			append_dev(div, t21);
     			append_dev(div, button11);
     			append_dev(button11, t22);
-    			append_dev(div, t23);
-    			append_dev(div, button12);
-    			append_dev(button12, t24);
-    			append_dev(div, t25);
-    			append_dev(div, button13);
-    			append_dev(button13, t26);
 
     			if (!mounted) {
     				dispose = [
-    					listen_dev(button0, "click", /*select*/ ctx[2](1), false, false, false),
-    					listen_dev(button1, "click", /*select*/ ctx[2](2), false, false, false),
-    					listen_dev(button2, "click", /*select*/ ctx[2](3), false, false, false),
-    					listen_dev(button3, "click", /*select*/ ctx[2](4), false, false, false),
-    					listen_dev(button4, "click", /*select*/ ctx[2](5), false, false, false),
-    					listen_dev(button5, "click", /*select*/ ctx[2](6), false, false, false),
-    					listen_dev(button6, "click", /*select*/ ctx[2](7), false, false, false),
-    					listen_dev(button7, "click", /*select*/ ctx[2](8), false, false, false),
-    					listen_dev(button8, "click", /*select*/ ctx[2](9), false, false, false),
-    					listen_dev(button9, "click", /*backspace*/ ctx[6], false, false, false),
-    					listen_dev(button10, "click", /*select*/ ctx[2](0), false, false, false),
-    					listen_dev(button11, "click", /*clear*/ ctx[5], false, false, false),
-    					listen_dev(button12, "click", /*decrement*/ ctx[3], false, false, false),
-    					listen_dev(button13, "click", /*increment*/ ctx[4], false, false, false)
+    					listen_dev(button0, "click", /*select*/ ctx[1](1), false, false, false),
+    					listen_dev(button1, "click", /*select*/ ctx[1](2), false, false, false),
+    					listen_dev(button2, "click", /*select*/ ctx[1](3), false, false, false),
+    					listen_dev(button3, "click", /*select*/ ctx[1](4), false, false, false),
+    					listen_dev(button4, "click", /*select*/ ctx[1](5), false, false, false),
+    					listen_dev(button5, "click", /*select*/ ctx[1](6), false, false, false),
+    					listen_dev(button6, "click", /*select*/ ctx[1](7), false, false, false),
+    					listen_dev(button7, "click", /*select*/ ctx[1](8), false, false, false),
+    					listen_dev(button8, "click", /*select*/ ctx[1](9), false, false, false),
+    					listen_dev(button9, "click", /*backspace*/ ctx[3], false, false, false),
+    					listen_dev(button10, "click", /*select*/ ctx[1](0), false, false, false),
+    					listen_dev(button11, "click", /*clear*/ ctx[2], false, false, false)
     				];
 
     				mounted = true;
@@ -633,14 +616,6 @@ var app = (function () {
     			if (dirty & /*value*/ 1 && button11_disabled_value !== (button11_disabled_value = !/*value*/ ctx[0])) {
     				prop_dev(button11, "disabled", button11_disabled_value);
     			}
-
-    			if (dirty & /*value*/ 1 && button12_disabled_value !== (button12_disabled_value = /*value*/ ctx[0] <= 1)) {
-    				prop_dev(button12, "disabled", button12_disabled_value);
-    			}
-
-    			if (dirty & /*value, max*/ 3 && button13_disabled_value !== (button13_disabled_value = /*value*/ ctx[0] == /*max*/ ctx[1])) {
-    				prop_dev(button13, "disabled", button13_disabled_value);
-    			}
     		},
     		i: noop,
     		o: noop,
@@ -653,7 +628,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment.name,
+    		id: create_fragment$1.name,
     		type: "component",
     		source: "",
     		ctx
@@ -662,9 +637,9 @@ var app = (function () {
     	return block;
     }
 
-    function instance($$self, $$props, $$invalidate) {
+    function instance$1($$self, $$props, $$invalidate) {
     	let { $$slots: slots = {}, $$scope } = $$props;
-    	validate_slots("Keypad", slots, []);
+    	validate_slots('Keypad', slots, []);
     	let { value = "" } = $$props;
     	let { max = 99999999 } = $$props;
     	const dispatch = createEventDispatcher();
@@ -673,31 +648,23 @@ var app = (function () {
     		$$invalidate(0, value = Math.min(+value * 10 + num, max || 99999999));
     	};
 
-    	const decrement = () => {
-    		$$invalidate(0, value = Math.max(1, +value - 1));
-    	};
-
-    	const increment = () => {
-    		$$invalidate(0, value = Math.min(+value + 1, max || 99999999));
-    	};
-
     	const clear = () => {
     		$$invalidate(0, value = "");
     	};
 
     	const backspace = () => {
-    		$$invalidate(0, value = Math.floor(+value / 10) || "");
+    		$$invalidate(0, value = Math.floor(+value / 10) || '');
     	};
 
-    	const writable_props = ["value", "max"];
+    	const writable_props = ['value', 'max'];
 
     	Object.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console.warn(`<Keypad> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console.warn(`<Keypad> was created with unknown prop '${key}'`);
     	});
 
     	$$self.$$set = $$props => {
-    		if ("value" in $$props) $$invalidate(0, value = $$props.value);
-    		if ("max" in $$props) $$invalidate(1, max = $$props.max);
+    		if ('value' in $$props) $$invalidate(0, value = $$props.value);
+    		if ('max' in $$props) $$invalidate(4, max = $$props.max);
     	};
 
     	$$self.$capture_state = () => ({
@@ -706,34 +673,32 @@ var app = (function () {
     		max,
     		dispatch,
     		select,
-    		decrement,
-    		increment,
     		clear,
     		backspace
     	});
 
     	$$self.$inject_state = $$props => {
-    		if ("value" in $$props) $$invalidate(0, value = $$props.value);
-    		if ("max" in $$props) $$invalidate(1, max = $$props.max);
+    		if ('value' in $$props) $$invalidate(0, value = $$props.value);
+    		if ('max' in $$props) $$invalidate(4, max = $$props.max);
     	};
 
     	if ($$props && "$$inject" in $$props) {
     		$$self.$inject_state($$props.$$inject);
     	}
 
-    	return [value, max, select, decrement, increment, clear, backspace];
+    	return [value, select, clear, backspace, max];
     }
 
     class Keypad extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance, create_fragment, safe_not_equal, { value: 0, max: 1 });
+    		init(this, options, instance$1, create_fragment$1, safe_not_equal, { value: 0, max: 4 });
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "Keypad",
     			options,
-    			id: create_fragment.name
+    			id: create_fragment$1.name
     		});
     	}
 
@@ -762,16 +727,15 @@ var app = (function () {
      */
     function writable(value, start = noop) {
         let stop;
-        const subscribers = [];
+        const subscribers = new Set();
         function set(new_value) {
             if (safe_not_equal(value, new_value)) {
                 value = new_value;
                 if (stop) { // store is ready
                     const run_queue = !subscriber_queue.length;
-                    for (let i = 0; i < subscribers.length; i += 1) {
-                        const s = subscribers[i];
-                        s[1]();
-                        subscriber_queue.push(s, value);
+                    for (const subscriber of subscribers) {
+                        subscriber[1]();
+                        subscriber_queue.push(subscriber, value);
                     }
                     if (run_queue) {
                         for (let i = 0; i < subscriber_queue.length; i += 2) {
@@ -787,17 +751,14 @@ var app = (function () {
         }
         function subscribe(run, invalidate = noop) {
             const subscriber = [run, invalidate];
-            subscribers.push(subscriber);
-            if (subscribers.length === 1) {
+            subscribers.add(subscriber);
+            if (subscribers.size === 1) {
                 stop = start(set) || noop;
             }
             run(value);
             return () => {
-                const index = subscribers.indexOf(subscriber);
-                if (index !== -1) {
-                    subscribers.splice(index, 1);
-                }
-                if (subscribers.length === 0) {
+                subscribers.delete(subscriber);
+                if (subscribers.size === 0) {
                     stop();
                     stop = null;
                 }
@@ -808,10 +769,8 @@ var app = (function () {
 
     function writableGun(gunData, value) {
         if (value === undefined) value = null;
-        console.debug('create store:');
     	let store = writable(value);
         store.subscribe(data => {
-            console.debug('subscription', data);
             value = {data};
         });
         gunData.once(data => {
@@ -826,7 +785,7 @@ var app = (function () {
         });
 
         function set(newval) {
-            console.log('set(newval)', newval);
+            console.debug('gun.put', newval);
             gunData.put(newval);
         }
         function update(fn) {
@@ -838,28 +797,28 @@ var app = (function () {
         return { set, update, subscribe };
     }
 
-    /* src/App.svelte generated by Svelte v3.29.0 */
+    /* src/App.svelte generated by Svelte v3.40.1 */
 
     const { Object: Object_1, console: console_1 } = globals;
-    const file$1 = "src/App.svelte";
+    const file = "src/App.svelte";
 
     function get_each_context(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[41] = list[i];
-    	child_ctx[43] = i;
+    	child_ctx[50] = list[i];
+    	child_ctx[52] = i;
     	return child_ctx;
     }
 
     function get_each_context_1(ctx, list, i) {
     	const child_ctx = ctx.slice();
-    	child_ctx[44] = list[i];
+    	child_ctx[53] = list[i];
     	return child_ctx;
     }
 
-    // (194:2) {#each filteredBooks as book}
+    // (209:2) {#each filteredBooks as book}
     function create_each_block_1(ctx) {
     	let button;
-    	let t_value = /*book*/ ctx[44].name + "";
+    	let t_value = /*book*/ ctx[53].name + "";
     	let t;
     	let mounted;
     	let dispose;
@@ -868,9 +827,9 @@ var app = (function () {
     		c: function create() {
     			button = element("button");
     			t = text(t_value);
-    			attr_dev(button, "class", "book-item btn svelte-1gs9le7");
-    			toggle_class(button, "btn-primary", /*book*/ ctx[44].abbreviation == /*$address*/ ctx[5].book);
-    			add_location(button, file$1, 194, 2, 5189);
+    			attr_dev(button, "class", "book-item btn");
+    			toggle_class(button, "btn-primary", /*book*/ ctx[53].abbreviation == /*$address*/ ctx[2].book);
+    			add_location(button, file, 209, 2, 6467);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, button, anchor);
@@ -881,7 +840,7 @@ var app = (function () {
     					button,
     					"click",
     					function () {
-    						if (is_function(/*addressSelector*/ ctx[19]({ book: /*book*/ ctx[44].abbreviation }))) /*addressSelector*/ ctx[19]({ book: /*book*/ ctx[44].abbreviation }).apply(this, arguments);
+    						if (is_function(/*addressSelector*/ ctx[19]({ book: /*book*/ ctx[53].abbreviation }))) /*addressSelector*/ ctx[19]({ book: /*book*/ ctx[53].abbreviation }).apply(this, arguments);
     					},
     					false,
     					false,
@@ -893,10 +852,10 @@ var app = (function () {
     		},
     		p: function update(new_ctx, dirty) {
     			ctx = new_ctx;
-    			if (dirty[0] & /*filteredBooks*/ 256 && t_value !== (t_value = /*book*/ ctx[44].name + "")) set_data_dev(t, t_value);
+    			if (dirty[0] & /*filteredBooks*/ 128 && t_value !== (t_value = /*book*/ ctx[53].name + "")) set_data_dev(t, t_value);
 
-    			if (dirty[0] & /*filteredBooks, $address*/ 288) {
-    				toggle_class(button, "btn-primary", /*book*/ ctx[44].abbreviation == /*$address*/ ctx[5].book);
+    			if (dirty[0] & /*filteredBooks, $address*/ 132) {
+    				toggle_class(button, "btn-primary", /*book*/ ctx[53].abbreviation == /*$address*/ ctx[2].book);
     			}
     		},
     		d: function destroy(detaching) {
@@ -910,18 +869,18 @@ var app = (function () {
     		block,
     		id: create_each_block_1.name,
     		type: "each",
-    		source: "(194:2) {#each filteredBooks as book}",
+    		source: "(209:2) {#each filteredBooks as book}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (199:2) {#each lastAddresses as addr, i}
+    // (213:2) {#each lastAddresses as addr, i}
     function create_each_block(ctx) {
     	let div;
     	let button0;
-    	let t0_value = (/*addressAsString*/ ctx[18](/*addr*/ ctx[41]) || /*addr*/ ctx[41].book + " " + /*addr*/ ctx[41].chapter + "," + /*addr*/ ctx[41].verse) + "";
+    	let t0_value = (/*addressAsString*/ ctx[18](/*addr*/ ctx[50]) || /*addr*/ ctx[50].book + ' ' + /*addr*/ ctx[50].chapter + ',' + /*addr*/ ctx[50].verse) + "";
     	let t0;
     	let t1;
     	let button1;
@@ -938,13 +897,13 @@ var app = (function () {
     			button1 = element("button");
     			button1.textContent = "×";
     			t3 = space();
-    			attr_dev(button0, "class", "address-set btn svelte-1gs9le7");
-    			toggle_class(button0, "btn-primary", equalAddresses(/*addr*/ ctx[41], /*$address*/ ctx[5]));
-    			add_location(button0, file$1, 200, 4, 5471);
-    			attr_dev(button1, "class", "btn btn-secondary address-remove svelte-1gs9le7");
-    			add_location(button1, file$1, 201, 4, 5671);
-    			attr_dev(div, "class", "address-item btn-group svelte-1gs9le7");
-    			add_location(div, file$1, 199, 2, 5430);
+    			attr_dev(button0, "class", "address-set btn");
+    			toggle_class(button0, "btn-primary", equalAddresses(/*addr*/ ctx[50], /*$address*/ ctx[2]));
+    			add_location(button0, file, 214, 4, 6747);
+    			attr_dev(button1, "class", "btn btn-secondary address-remove");
+    			add_location(button1, file, 215, 4, 6947);
+    			attr_dev(div, "class", "address-item btn-group");
+    			add_location(div, file, 213, 2, 6706);
     		},
     		m: function mount(target, anchor) {
     			insert_dev(target, div, anchor);
@@ -960,13 +919,13 @@ var app = (function () {
     						button0,
     						"click",
     						function () {
-    							if (is_function(/*addressSelector*/ ctx[19](/*addr*/ ctx[41]))) /*addressSelector*/ ctx[19](/*addr*/ ctx[41]).apply(this, arguments);
+    							if (is_function(/*addressSelector*/ ctx[19](/*addr*/ ctx[50]))) /*addressSelector*/ ctx[19](/*addr*/ ctx[50]).apply(this, arguments);
     						},
     						false,
     						false,
     						false
     					),
-    					listen_dev(button1, "click", /*removeLastAddress*/ ctx[20](/*i*/ ctx[43]), false, false, false)
+    					listen_dev(button1, "click", /*removeLastAddress*/ ctx[20](/*i*/ ctx[52]), false, false, false)
     				];
 
     				mounted = true;
@@ -974,10 +933,10 @@ var app = (function () {
     		},
     		p: function update(new_ctx, dirty) {
     			ctx = new_ctx;
-    			if (dirty[0] & /*lastAddresses*/ 8 && t0_value !== (t0_value = (/*addressAsString*/ ctx[18](/*addr*/ ctx[41]) || /*addr*/ ctx[41].book + " " + /*addr*/ ctx[41].chapter + "," + /*addr*/ ctx[41].verse) + "")) set_data_dev(t0, t0_value);
+    			if (dirty[0] & /*lastAddresses*/ 2 && t0_value !== (t0_value = (/*addressAsString*/ ctx[18](/*addr*/ ctx[50]) || /*addr*/ ctx[50].book + ' ' + /*addr*/ ctx[50].chapter + ',' + /*addr*/ ctx[50].verse) + "")) set_data_dev(t0, t0_value);
 
-    			if (dirty[0] & /*lastAddresses, $address*/ 40) {
-    				toggle_class(button0, "btn-primary", equalAddresses(/*addr*/ ctx[41], /*$address*/ ctx[5]));
+    			if (dirty[0] & /*lastAddresses, $address*/ 6) {
+    				toggle_class(button0, "btn-primary", equalAddresses(/*addr*/ ctx[50], /*$address*/ ctx[2]));
     			}
     		},
     		d: function destroy(detaching) {
@@ -991,14 +950,14 @@ var app = (function () {
     		block,
     		id: create_each_block.name,
     		type: "each",
-    		source: "(199:2) {#each lastAddresses as addr, i}",
+    		source: "(213:2) {#each lastAddresses as addr, i}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (213:21) {:else}
+    // (228:21) {:else}
     function create_else_block(ctx) {
     	let t;
 
@@ -1018,14 +977,14 @@ var app = (function () {
     		block,
     		id: create_else_block.name,
     		type: "else",
-    		source: "(213:21) {:else}",
+    		source: "(228:21) {:else}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (213:4) {#if $shown}
+    // (228:4) {#if $shown}
     function create_if_block_2(ctx) {
     	let t;
 
@@ -1045,17 +1004,17 @@ var app = (function () {
     		block,
     		id: create_if_block_2.name,
     		type: "if",
-    		source: "(213:4) {#if $shown}",
+    		source: "(228:4) {#if $shown}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (217:25) {#if $address.count>1}
+    // (232:25) {#if $address.count>1}
     function create_if_block_1(ctx) {
     	let t0;
-    	let t1_value = /*$address*/ ctx[5].verse + /*$address*/ ctx[5].count - 1 + "";
+    	let t1_value = /*$address*/ ctx[2].verse + /*$address*/ ctx[2].count - 1 + "";
     	let t1;
 
     	const block = {
@@ -1068,7 +1027,7 @@ var app = (function () {
     			insert_dev(target, t1, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*$address*/ 32 && t1_value !== (t1_value = /*$address*/ ctx[5].verse + /*$address*/ ctx[5].count - 1 + "")) set_data_dev(t1, t1_value);
+    			if (dirty[0] & /*$address*/ 4 && t1_value !== (t1_value = /*$address*/ ctx[2].verse + /*$address*/ ctx[2].count - 1 + "")) set_data_dev(t1, t1_value);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(t0);
@@ -1080,14 +1039,14 @@ var app = (function () {
     		block,
     		id: create_if_block_1.name,
     		type: "if",
-    		source: "(217:25) {#if $address.count>1}",
+    		source: "(232:25) {#if $address.count>1}",
     		ctx
     	});
 
     	return block;
     }
 
-    // (255:2) {#if loadingBible}
+    // (263:12) {#if loadingBible}
     function create_if_block(ctx) {
     	let t0;
     	let t1;
@@ -1096,7 +1055,7 @@ var app = (function () {
     	const block = {
     		c: function create() {
     			t0 = text("Načítava sa biblia ");
-    			t1 = text(/*$bibleid*/ ctx[4]);
+    			t1 = text(/*$bibleid*/ ctx[3]);
     			t2 = text(".");
     		},
     		m: function mount(target, anchor) {
@@ -1105,7 +1064,7 @@ var app = (function () {
     			insert_dev(target, t2, anchor);
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*$bibleid*/ 16) set_data_dev(t1, /*$bibleid*/ ctx[4]);
+    			if (dirty[0] & /*$bibleid*/ 8) set_data_dev(t1, /*$bibleid*/ ctx[3]);
     		},
     		d: function destroy(detaching) {
     			if (detaching) detach_dev(t0);
@@ -1118,14 +1077,14 @@ var app = (function () {
     		block,
     		id: create_if_block.name,
     		type: "if",
-    		source: "(255:2) {#if loadingBible}",
+    		source: "(263:12) {#if loadingBible}",
     		ctx
     	});
 
     	return block;
     }
 
-    function create_fragment$1(ctx) {
+    function create_fragment(ctx) {
     	let div0;
     	let input;
     	let t0;
@@ -1137,65 +1096,81 @@ var app = (function () {
     	let t4;
     	let div3;
     	let t5;
-    	let t6_value = /*$address*/ ctx[5].chapter + "";
+    	let t6_value = /*$address*/ ctx[2].chapter + "";
     	let t6;
     	let t7;
+    	let t8;
+    	let t9;
     	let keypad0;
     	let updating_value;
-    	let t8;
-    	let button1;
-    	let t9;
-    	let div4;
     	let t10;
-    	let t11_value = /*$address*/ ctx[5].verse + "";
-    	let t11;
+    	let button1;
     	let t12;
-    	let t13;
+    	let button2;
+    	let t14;
+    	let br0;
+    	let t15;
+    	let button3;
+    	let t16;
+    	let div4;
+    	let t17;
+    	let t18_value = /*$address*/ ctx[2].verse + "";
+    	let t18;
+    	let t19;
+    	let t20;
+    	let t21;
+    	let t22;
     	let keypad1;
     	let updating_value_1;
-    	let t14;
-    	let button2;
-    	let t15;
-    	let button2_disabled_value;
-    	let t16;
-    	let button3;
-    	let t17;
-    	let button3_disabled_value;
-    	let t18;
-    	let br0;
-    	let t19;
-    	let button4;
-    	let t20;
-    	let button4_disabled_value;
-    	let t21;
-    	let button5;
-    	let t22;
-    	let button5_disabled_value;
     	let t23;
-    	let div5;
-    	let t24;
+    	let button4;
     	let t25;
-    	let span;
-    	let t26;
-    	let br1;
+    	let button5;
     	let t27;
-    	let div6;
+    	let br1;
     	let t28;
+    	let button6;
+    	let t29;
+    	let button6_disabled_value;
+    	let t30;
+    	let button7;
+    	let t31;
+    	let button7_disabled_value;
+    	let t32;
+    	let br2;
+    	let t33;
+    	let button8;
+    	let t34;
+    	let button8_disabled_value;
+    	let t35;
+    	let button9;
+    	let t36;
+    	let button9_disabled_value;
+    	let t37;
+    	let div5;
+    	let t38;
+    	let t39;
+    	let p;
+    	let t40;
+    	let br3;
+    	let t41;
+    	let div6;
+    	let t42;
     	let select0;
     	let option0;
     	let option1;
     	let option2;
-    	let t32;
+    	let t46;
     	let div7;
-    	let t33;
+    	let t47;
     	let select1;
     	let option3;
     	let option4;
-    	let t36;
+    	let t50;
     	let current;
     	let mounted;
     	let dispose;
-    	let each_value_1 = /*filteredBooks*/ ctx[8];
+    	let each_value_1 = /*filteredBooks*/ ctx[7];
     	validate_each_argument(each_value_1);
     	let each_blocks_1 = [];
 
@@ -1203,7 +1178,7 @@ var app = (function () {
     		each_blocks_1[i] = create_each_block_1(get_each_context_1(ctx, each_value_1, i));
     	}
 
-    	let each_value = /*lastAddresses*/ ctx[3];
+    	let each_value = /*lastAddresses*/ ctx[1];
     	validate_each_argument(each_value);
     	let each_blocks = [];
 
@@ -1212,42 +1187,40 @@ var app = (function () {
     	}
 
     	function keypad0_value_binding(value) {
-    		/*keypad0_value_binding*/ ctx[24].call(null, value);
+    		/*keypad0_value_binding*/ ctx[31](value);
     	}
 
-    	let keypad0_props = {
-    		max: Object.keys(/*shownBook*/ ctx[2].chapters).length
-    	};
+    	let keypad0_props = { max: /*bookLength*/ ctx[5] };
 
-    	if (/*$address*/ ctx[5].chapter !== void 0) {
-    		keypad0_props.value = /*$address*/ ctx[5].chapter;
+    	if (/*$address*/ ctx[2].chapter !== void 0) {
+    		keypad0_props.value = /*$address*/ ctx[2].chapter;
     	}
 
     	keypad0 = new Keypad({ props: keypad0_props, $$inline: true });
-    	binding_callbacks.push(() => bind(keypad0, "value", keypad0_value_binding));
+    	binding_callbacks.push(() => bind(keypad0, 'value', keypad0_value_binding));
 
     	function select_block_type(ctx, dirty) {
-    		if (/*$shown*/ ctx[10]) return create_if_block_2;
+    		if (/*$shown*/ ctx[8]) return create_if_block_2;
     		return create_else_block;
     	}
 
     	let current_block_type = select_block_type(ctx);
     	let if_block0 = current_block_type(ctx);
-    	let if_block1 = /*$address*/ ctx[5].count > 1 && create_if_block_1(ctx);
+    	let if_block1 = /*$address*/ ctx[2].count > 1 && create_if_block_1(ctx);
 
     	function keypad1_value_binding(value) {
-    		/*keypad1_value_binding*/ ctx[25].call(null, value);
+    		/*keypad1_value_binding*/ ctx[32](value);
     	}
 
-    	let keypad1_props = { max: /*bookLength*/ ctx[9] };
+    	let keypad1_props = { max: /*chapterLength*/ ctx[6] };
 
-    	if (/*$address*/ ctx[5].verse !== void 0) {
-    		keypad1_props.value = /*$address*/ ctx[5].verse;
+    	if (/*$address*/ ctx[2].verse !== void 0) {
+    		keypad1_props.value = /*$address*/ ctx[2].verse;
     	}
 
     	keypad1 = new Keypad({ props: keypad1_props, $$inline: true });
-    	binding_callbacks.push(() => bind(keypad1, "value", keypad1_value_binding));
-    	let if_block2 = /*loadingBible*/ ctx[0] && create_if_block(ctx);
+    	binding_callbacks.push(() => bind(keypad1, 'value', keypad1_value_binding));
+    	let if_block2 = /*loadingBible*/ ctx[4] && create_if_block(ctx);
 
     	const block = {
     		c: function create() {
@@ -1274,43 +1247,63 @@ var app = (function () {
     			div3 = element("div");
     			t5 = text("Kapitola: ");
     			t6 = text(t6_value);
-    			t7 = space();
-    			create_component(keypad0.$$.fragment);
-    			t8 = space();
-    			button1 = element("button");
-    			if_block0.c();
+    			t7 = text(" z ");
+    			t8 = text(/*bookLength*/ ctx[5]);
     			t9 = space();
-    			div4 = element("div");
-    			t10 = text("Verš: ");
-    			t11 = text(t11_value);
+    			create_component(keypad0.$$.fragment);
+    			t10 = space();
+    			button1 = element("button");
+    			button1.textContent = "-1";
     			t12 = space();
-    			if (if_block1) if_block1.c();
-    			t13 = space();
-    			create_component(keypad1.$$.fragment);
-    			t14 = space();
     			button2 = element("button");
-    			t15 = text("-1");
-    			t16 = space();
-    			button3 = element("button");
-    			t17 = text("+1");
-    			t18 = space();
+    			button2.textContent = "+1";
+    			t14 = space();
     			br0 = element("br");
+    			t15 = space();
+    			button3 = element("button");
+    			if_block0.c();
+    			t16 = space();
+    			div4 = element("div");
+    			t17 = text("Verš: ");
+    			t18 = text(t18_value);
     			t19 = space();
-    			button4 = element("button");
-    			t20 = text("⇐");
-    			t21 = space();
-    			button5 = element("button");
-    			t22 = text("⇒");
+    			if (if_block1) if_block1.c();
+    			t20 = text(" z ");
+    			t21 = text(/*chapterLength*/ ctx[6]);
+    			t22 = space();
+    			create_component(keypad1.$$.fragment);
     			t23 = space();
-    			div5 = element("div");
-    			t24 = text(/*$line1*/ ctx[6]);
+    			button4 = element("button");
+    			button4.textContent = "-1";
     			t25 = space();
-    			span = element("span");
-    			t26 = space();
-    			br1 = element("br");
+    			button5 = element("button");
+    			button5.textContent = "+1";
     			t27 = space();
+    			br1 = element("br");
+    			t28 = space();
+    			button6 = element("button");
+    			t29 = text("-1");
+    			t30 = space();
+    			button7 = element("button");
+    			t31 = text("+1");
+    			t32 = space();
+    			br2 = element("br");
+    			t33 = space();
+    			button8 = element("button");
+    			t34 = text("⇐");
+    			t35 = space();
+    			button9 = element("button");
+    			t36 = text("⇒");
+    			t37 = space();
+    			div5 = element("div");
+    			t38 = text(/*$line1*/ ctx[10]);
+    			t39 = space();
+    			p = element("p");
+    			t40 = space();
+    			br3 = element("br");
+    			t41 = space();
     			div6 = element("div");
-    			t28 = text("Téma:\n  ");
+    			t42 = text("Téma:\n  ");
     			select0 = element("select");
     			option0 = element("option");
     			option0.textContent = "Predvolené";
@@ -1318,91 +1311,109 @@ var app = (function () {
     			option1.textContent = "Jednoduché s tieňom";
     			option2 = element("option");
     			option2.textContent = "Fullscreen biele pozadie";
-    			t32 = space();
+    			t46 = space();
     			div7 = element("div");
-    			t33 = text("Biblia:\n  ");
+    			t47 = text("Biblia:\n  ");
     			select1 = element("select");
     			option3 = element("option");
     			option3.textContent = "Roháčkov";
     			option4 = element("option");
     			option4.textContent = "Ekumenický";
-    			t36 = space();
+    			t50 = space();
     			if (if_block2) if_block2.c();
     			attr_dev(input, "class", "form-control");
     			attr_dev(input, "type", "text");
     			attr_dev(input, "placeholder", "filter");
-    			add_location(input, file$1, 189, 2, 4903);
+    			set_style(input, "flex-grow", "1");
+    			add_location(input, file, 204, 2, 6160);
     			attr_dev(button0, "type", "button");
-    			attr_dev(button0, "class", "form-control btn btn-secondary svelte-1gs9le7");
+    			attr_dev(button0, "class", "form-control btn btn-secondary");
     			set_style(button0, "max-width", "2rem");
-    			add_location(button0, file$1, 190, 2, 4993);
+    			add_location(button0, file, 205, 2, 6271);
     			attr_dev(div0, "class", "input-group");
     			set_style(div0, "width", "100%");
     			set_style(div0, "display", "flex");
-    			add_location(div0, file$1, 188, 0, 4839);
-    			attr_dev(div1, "class", "books-filter svelte-1gs9le7");
-    			add_location(div1, file$1, 192, 0, 5128);
-    			attr_dev(div2, "class", "address-filter svelte-1gs9le7");
-    			add_location(div2, file$1, 197, 0, 5364);
-    			attr_dev(button1, "class", "control-button btn svelte-1gs9le7");
+    			add_location(div0, file, 203, 0, 6096);
+    			attr_dev(div1, "class", "books-filter");
+    			add_location(div1, file, 207, 0, 6406);
+    			attr_dev(div2, "class", "address-filter");
+    			add_location(div2, file, 211, 0, 6640);
+    			attr_dev(button1, "class", "btn btn-primary");
     			set_style(button1, "line-height", "2rem");
-    			toggle_class(button1, "btn-danger", /*$shown*/ ctx[10]);
-    			toggle_class(button1, "btn-success", !/*$shown*/ ctx[10]);
-    			add_location(button1, file$1, 209, 2, 5990);
-    			set_style(div3, "display", "inline-block");
-    			set_style(div3, "margin", "0 .5rem 0 0");
-    			set_style(div3, "vertical-align", "top");
-    			add_location(div3, file$1, 206, 0, 5790);
-    			attr_dev(button2, "class", "btn btn-primary svelte-1gs9le7");
+    			add_location(button1, file, 223, 2, 7247);
+    			attr_dev(button2, "class", "btn btn-primary");
     			set_style(button2, "line-height", "2rem");
-    			button2.disabled = button2_disabled_value = /*$address*/ ctx[5].count <= 1;
-    			add_location(button2, file$1, 218, 2, 6400);
-    			attr_dev(button3, "class", "btn btn-primary svelte-1gs9le7");
+    			add_location(button2, file, 224, 2, 7348);
+    			add_location(br0, file, 225, 2, 7449);
+    			attr_dev(button3, "class", "control-button btn");
     			set_style(button3, "line-height", "2rem");
-    			button3.disabled = button3_disabled_value = /*$address*/ ctx[5].verse + /*$address*/ ctx[5].count > /*bookLength*/ ctx[9];
-    			add_location(button3, file$1, 221, 2, 6567);
-    			add_location(br0, file$1, 224, 2, 6757);
-    			attr_dev(button4, "class", "btn btn-primary svelte-1gs9le7");
+    			toggle_class(button3, "btn-danger", /*$shown*/ ctx[8]);
+    			toggle_class(button3, "btn-success", !/*$shown*/ ctx[8]);
+    			add_location(button3, file, 226, 2, 7458);
+    			set_style(div3, "display", "inline-block");
+    			set_style(div3, "margin", ".5rem");
+    			set_style(div3, "vertical-align", "top");
+    			add_location(div3, file, 220, 0, 7066);
+    			attr_dev(button4, "class", "btn btn-primary");
     			set_style(button4, "line-height", "2rem");
-    			button4.disabled = button4_disabled_value = /*$address*/ ctx[5].verse <= 1;
-    			add_location(button4, file$1, 225, 2, 6765);
-    			attr_dev(button5, "class", "btn btn-primary svelte-1gs9le7");
+    			add_location(button4, file, 233, 2, 7905);
+    			attr_dev(button5, "class", "btn btn-primary");
     			set_style(button5, "line-height", "2rem");
-    			button5.disabled = button5_disabled_value = /*$address*/ ctx[5].verse + /*$address*/ ctx[5].count > /*bookLength*/ ctx[9];
-    			add_location(button5, file$1, 229, 2, 6978);
+    			add_location(button5, file, 234, 2, 8004);
+    			add_location(br1, file, 235, 2, 8103);
+    			attr_dev(button6, "class", "btn btn-primary");
+    			set_style(button6, "line-height", "2rem");
+    			button6.disabled = button6_disabled_value = /*$address*/ ctx[2].count <= 1;
+    			add_location(button6, file, 236, 2, 8112);
+    			attr_dev(button7, "class", "btn btn-primary");
+    			set_style(button7, "line-height", "2rem");
+    			button7.disabled = button7_disabled_value = /*$address*/ ctx[2].verse + /*$address*/ ctx[2].count > /*chapterLength*/ ctx[6];
+    			add_location(button7, file, 237, 2, 8259);
+    			add_location(br2, file, 238, 2, 8431);
+    			attr_dev(button8, "class", "btn btn-primary");
+    			set_style(button8, "line-height", "2rem");
+    			button8.disabled = button8_disabled_value = /*$address*/ ctx[2].verse <= 1;
+    			add_location(button8, file, 239, 2, 8440);
+    			attr_dev(button9, "class", "btn btn-primary");
+    			set_style(button9, "line-height", "2rem");
+    			button9.disabled = button9_disabled_value = /*$address*/ ctx[2].verse + /*$address*/ ctx[2].count > /*chapterLength*/ ctx[6];
+    			add_location(button9, file, 240, 2, 8623);
     			set_style(div4, "display", "inline-block");
-    			add_location(div4, file$1, 215, 0, 6210);
-    			attr_dev(div5, "class", "address svelte-1gs9le7");
-    			add_location(div5, file$1, 235, 0, 7231);
-    			attr_dev(span, "class", "vers svelte-1gs9le7");
-    			set_style(span, "margin-bottom", "1rem");
-    			add_location(span, file$1, 236, 0, 7267);
-    			add_location(br1, file$1, 238, 0, 7338);
+    			set_style(div4, "margin", ".5rem");
+    			set_style(div4, "vertical-align", "top");
+    			add_location(div4, file, 230, 0, 7658);
+    			attr_dev(div5, "class", "address");
+    			add_location(div5, file, 243, 0, 8851);
+    			attr_dev(p, "class", "vers");
+    			set_style(p, "margin-bottom", "1rem");
+    			set_style(p, "min-height", "5rem");
+    			add_location(p, file, 244, 0, 8887);
+    			add_location(br3, file, 247, 0, 8973);
     			option0.__value = "";
     			option0.value = option0.__value;
     			option0.selected = true;
-    			add_location(option0, file$1, 242, 4, 7415);
+    			add_location(option0, file, 251, 4, 9051);
     			option1.__value = "simple-with-shadow";
     			option1.value = option1.__value;
     			option1.selected = true;
-    			add_location(option1, file$1, 243, 4, 7465);
+    			add_location(option1, file, 252, 4, 9101);
     			option2.__value = "fullscreen-white-bg";
     			option2.value = option2.__value;
-    			add_location(option2, file$1, 244, 4, 7542);
-    			if (/*$bodyclass*/ ctx[11] === void 0) add_render_callback(() => /*select0_change_handler*/ ctx[30].call(select0));
-    			add_location(select0, file$1, 241, 2, 7378);
+    			add_location(option2, file, 253, 4, 9178);
+    			if (/*$bodyclass*/ ctx[11] === void 0) add_render_callback(() => /*select0_change_handler*/ ctx[37].call(select0));
+    			add_location(select0, file, 250, 2, 9014);
     			attr_dev(div6, "class", "bodyclass");
-    			add_location(div6, file$1, 239, 0, 7344);
+    			add_location(div6, file, 248, 0, 8980);
     			option3.__value = "roh";
     			option3.value = option3.__value;
-    			add_location(option3, file$1, 251, 4, 7699);
+    			add_location(option3, file, 260, 4, 9335);
     			option4.__value = "seb";
     			option4.value = option4.__value;
-    			add_location(option4, file$1, 252, 4, 7741);
-    			if (/*$bibleid*/ ctx[4] === void 0) add_render_callback(() => /*select1_change_handler*/ ctx[31].call(select1));
-    			add_location(select1, file$1, 250, 2, 7664);
+    			add_location(option4, file, 261, 4, 9377);
+    			if (/*$bibleid*/ ctx[3] === void 0) add_render_callback(() => /*select1_change_handler*/ ctx[38].call(select1));
+    			add_location(select1, file, 259, 2, 9300);
     			attr_dev(div7, "class", "bible");
-    			add_location(div7, file$1, 248, 0, 7632);
+    			add_location(div7, file, 257, 0, 9268);
     		},
     		l: function claim(nodes) {
     			throw new Error("options.hydrate only works if the component was compiled with the `hydratable: true` option");
@@ -1410,7 +1421,7 @@ var app = (function () {
     		m: function mount(target, anchor) {
     			insert_dev(target, div0, anchor);
     			append_dev(div0, input);
-    			set_input_value(input, /*bookFilter*/ ctx[1]);
+    			set_input_value(input, /*bookFilter*/ ctx[0]);
     			append_dev(div0, t0);
     			append_dev(div0, button0);
     			insert_dev(target, t2, anchor);
@@ -1432,82 +1443,102 @@ var app = (function () {
     			append_dev(div3, t5);
     			append_dev(div3, t6);
     			append_dev(div3, t7);
-    			mount_component(keypad0, div3, null);
     			append_dev(div3, t8);
+    			append_dev(div3, t9);
+    			mount_component(keypad0, div3, null);
+    			append_dev(div3, t10);
     			append_dev(div3, button1);
-    			if_block0.m(button1, null);
-    			insert_dev(target, t9, anchor);
+    			append_dev(div3, t12);
+    			append_dev(div3, button2);
+    			append_dev(div3, t14);
+    			append_dev(div3, br0);
+    			append_dev(div3, t15);
+    			append_dev(div3, button3);
+    			if_block0.m(button3, null);
+    			insert_dev(target, t16, anchor);
     			insert_dev(target, div4, anchor);
-    			append_dev(div4, t10);
-    			append_dev(div4, t11);
-    			append_dev(div4, t12);
-    			if (if_block1) if_block1.m(div4, null);
-    			append_dev(div4, t13);
-    			mount_component(keypad1, div4, null);
-    			append_dev(div4, t14);
-    			append_dev(div4, button2);
-    			append_dev(button2, t15);
-    			append_dev(div4, t16);
-    			append_dev(div4, button3);
-    			append_dev(button3, t17);
+    			append_dev(div4, t17);
     			append_dev(div4, t18);
-    			append_dev(div4, br0);
     			append_dev(div4, t19);
-    			append_dev(div4, button4);
-    			append_dev(button4, t20);
+    			if (if_block1) if_block1.m(div4, null);
+    			append_dev(div4, t20);
     			append_dev(div4, t21);
+    			append_dev(div4, t22);
+    			mount_component(keypad1, div4, null);
+    			append_dev(div4, t23);
+    			append_dev(div4, button4);
+    			append_dev(div4, t25);
     			append_dev(div4, button5);
-    			append_dev(button5, t22);
-    			insert_dev(target, t23, anchor);
+    			append_dev(div4, t27);
+    			append_dev(div4, br1);
+    			append_dev(div4, t28);
+    			append_dev(div4, button6);
+    			append_dev(button6, t29);
+    			append_dev(div4, t30);
+    			append_dev(div4, button7);
+    			append_dev(button7, t31);
+    			append_dev(div4, t32);
+    			append_dev(div4, br2);
+    			append_dev(div4, t33);
+    			append_dev(div4, button8);
+    			append_dev(button8, t34);
+    			append_dev(div4, t35);
+    			append_dev(div4, button9);
+    			append_dev(button9, t36);
+    			insert_dev(target, t37, anchor);
     			insert_dev(target, div5, anchor);
-    			append_dev(div5, t24);
-    			insert_dev(target, t25, anchor);
-    			insert_dev(target, span, anchor);
-    			span.innerHTML = /*$line2*/ ctx[7];
-    			insert_dev(target, t26, anchor);
-    			insert_dev(target, br1, anchor);
-    			insert_dev(target, t27, anchor);
+    			append_dev(div5, t38);
+    			insert_dev(target, t39, anchor);
+    			insert_dev(target, p, anchor);
+    			p.innerHTML = /*$line2*/ ctx[9];
+    			insert_dev(target, t40, anchor);
+    			insert_dev(target, br3, anchor);
+    			insert_dev(target, t41, anchor);
     			insert_dev(target, div6, anchor);
-    			append_dev(div6, t28);
+    			append_dev(div6, t42);
     			append_dev(div6, select0);
     			append_dev(select0, option0);
     			append_dev(select0, option1);
     			append_dev(select0, option2);
     			select_option(select0, /*$bodyclass*/ ctx[11]);
-    			insert_dev(target, t32, anchor);
+    			insert_dev(target, t46, anchor);
     			insert_dev(target, div7, anchor);
-    			append_dev(div7, t33);
+    			append_dev(div7, t47);
     			append_dev(div7, select1);
     			append_dev(select1, option3);
     			append_dev(select1, option4);
-    			select_option(select1, /*$bibleid*/ ctx[4]);
-    			append_dev(div7, t36);
+    			select_option(select1, /*$bibleid*/ ctx[3]);
+    			append_dev(div7, t50);
     			if (if_block2) if_block2.m(div7, null);
     			current = true;
 
     			if (!mounted) {
     				dispose = [
-    					listen_dev(input, "input", /*input_input_handler*/ ctx[22]),
-    					listen_dev(button0, "click", /*click_handler*/ ctx[23], false, false, false),
-    					listen_dev(button1, "click", /*toggleLine*/ ctx[21], false, false, false),
-    					listen_dev(button2, "click", /*click_handler_1*/ ctx[26], false, false, false),
-    					listen_dev(button3, "click", /*click_handler_2*/ ctx[27], false, false, false),
-    					listen_dev(button4, "click", /*click_handler_3*/ ctx[28], false, false, false),
-    					listen_dev(button5, "click", /*click_handler_4*/ ctx[29], false, false, false),
-    					listen_dev(select0, "change", /*select0_change_handler*/ ctx[30]),
-    					listen_dev(select1, "change", /*select1_change_handler*/ ctx[31])
+    					listen_dev(input, "input", /*input_input_handler*/ ctx[29]),
+    					listen_dev(button0, "click", /*click_handler*/ ctx[30], false, false, false),
+    					listen_dev(button1, "click", /*decrementChapter*/ ctx[24], false, false, false),
+    					listen_dev(button2, "click", /*incrementChapter*/ ctx[25], false, false, false),
+    					listen_dev(button3, "click", /*toggleLine*/ ctx[21], false, false, false),
+    					listen_dev(button4, "click", /*decrementVerse*/ ctx[22], false, false, false),
+    					listen_dev(button5, "click", /*incrementVerse*/ ctx[23], false, false, false),
+    					listen_dev(button6, "click", /*click_handler_1*/ ctx[33], false, false, false),
+    					listen_dev(button7, "click", /*click_handler_2*/ ctx[34], false, false, false),
+    					listen_dev(button8, "click", /*click_handler_3*/ ctx[35], false, false, false),
+    					listen_dev(button9, "click", /*click_handler_4*/ ctx[36], false, false, false),
+    					listen_dev(select0, "change", /*select0_change_handler*/ ctx[37]),
+    					listen_dev(select1, "change", /*select1_change_handler*/ ctx[38])
     				];
 
     				mounted = true;
     			}
     		},
     		p: function update(ctx, dirty) {
-    			if (dirty[0] & /*bookFilter*/ 2 && input.value !== /*bookFilter*/ ctx[1]) {
-    				set_input_value(input, /*bookFilter*/ ctx[1]);
+    			if (dirty[0] & /*bookFilter*/ 1 && input.value !== /*bookFilter*/ ctx[0]) {
+    				set_input_value(input, /*bookFilter*/ ctx[0]);
     			}
 
-    			if (dirty[0] & /*filteredBooks, $address, addressSelector*/ 524576) {
-    				each_value_1 = /*filteredBooks*/ ctx[8];
+    			if (dirty[0] & /*filteredBooks, $address, addressSelector*/ 524420) {
+    				each_value_1 = /*filteredBooks*/ ctx[7];
     				validate_each_argument(each_value_1);
     				let i;
 
@@ -1530,8 +1561,8 @@ var app = (function () {
     				each_blocks_1.length = each_value_1.length;
     			}
 
-    			if (dirty[0] & /*removeLastAddress, lastAddresses, $address, addressSelector, addressAsString*/ 1835048) {
-    				each_value = /*lastAddresses*/ ctx[3];
+    			if (dirty[0] & /*removeLastAddress, lastAddresses, $address, addressSelector, addressAsString*/ 1835014) {
+    				each_value = /*lastAddresses*/ ctx[1];
     				validate_each_argument(each_value);
     				let i;
 
@@ -1554,13 +1585,14 @@ var app = (function () {
     				each_blocks.length = each_value.length;
     			}
 
-    			if ((!current || dirty[0] & /*$address*/ 32) && t6_value !== (t6_value = /*$address*/ ctx[5].chapter + "")) set_data_dev(t6, t6_value);
+    			if ((!current || dirty[0] & /*$address*/ 4) && t6_value !== (t6_value = /*$address*/ ctx[2].chapter + "")) set_data_dev(t6, t6_value);
+    			if (!current || dirty[0] & /*bookLength*/ 32) set_data_dev(t8, /*bookLength*/ ctx[5]);
     			const keypad0_changes = {};
-    			if (dirty[0] & /*shownBook*/ 4) keypad0_changes.max = Object.keys(/*shownBook*/ ctx[2].chapters).length;
+    			if (dirty[0] & /*bookLength*/ 32) keypad0_changes.max = /*bookLength*/ ctx[5];
 
-    			if (!updating_value && dirty[0] & /*$address*/ 32) {
+    			if (!updating_value && dirty[0] & /*$address*/ 4) {
     				updating_value = true;
-    				keypad0_changes.value = /*$address*/ ctx[5].chapter;
+    				keypad0_changes.value = /*$address*/ ctx[2].chapter;
     				add_flush_callback(() => updating_value = false);
     			}
 
@@ -1572,71 +1604,72 @@ var app = (function () {
 
     				if (if_block0) {
     					if_block0.c();
-    					if_block0.m(button1, null);
+    					if_block0.m(button3, null);
     				}
     			}
 
-    			if (dirty[0] & /*$shown*/ 1024) {
-    				toggle_class(button1, "btn-danger", /*$shown*/ ctx[10]);
+    			if (dirty[0] & /*$shown*/ 256) {
+    				toggle_class(button3, "btn-danger", /*$shown*/ ctx[8]);
     			}
 
-    			if (dirty[0] & /*$shown*/ 1024) {
-    				toggle_class(button1, "btn-success", !/*$shown*/ ctx[10]);
+    			if (dirty[0] & /*$shown*/ 256) {
+    				toggle_class(button3, "btn-success", !/*$shown*/ ctx[8]);
     			}
 
-    			if ((!current || dirty[0] & /*$address*/ 32) && t11_value !== (t11_value = /*$address*/ ctx[5].verse + "")) set_data_dev(t11, t11_value);
+    			if ((!current || dirty[0] & /*$address*/ 4) && t18_value !== (t18_value = /*$address*/ ctx[2].verse + "")) set_data_dev(t18, t18_value);
 
-    			if (/*$address*/ ctx[5].count > 1) {
+    			if (/*$address*/ ctx[2].count > 1) {
     				if (if_block1) {
     					if_block1.p(ctx, dirty);
     				} else {
     					if_block1 = create_if_block_1(ctx);
     					if_block1.c();
-    					if_block1.m(div4, t13);
+    					if_block1.m(div4, t20);
     				}
     			} else if (if_block1) {
     				if_block1.d(1);
     				if_block1 = null;
     			}
 
+    			if (!current || dirty[0] & /*chapterLength*/ 64) set_data_dev(t21, /*chapterLength*/ ctx[6]);
     			const keypad1_changes = {};
-    			if (dirty[0] & /*bookLength*/ 512) keypad1_changes.max = /*bookLength*/ ctx[9];
+    			if (dirty[0] & /*chapterLength*/ 64) keypad1_changes.max = /*chapterLength*/ ctx[6];
 
-    			if (!updating_value_1 && dirty[0] & /*$address*/ 32) {
+    			if (!updating_value_1 && dirty[0] & /*$address*/ 4) {
     				updating_value_1 = true;
-    				keypad1_changes.value = /*$address*/ ctx[5].verse;
+    				keypad1_changes.value = /*$address*/ ctx[2].verse;
     				add_flush_callback(() => updating_value_1 = false);
     			}
 
     			keypad1.$set(keypad1_changes);
 
-    			if (!current || dirty[0] & /*$address*/ 32 && button2_disabled_value !== (button2_disabled_value = /*$address*/ ctx[5].count <= 1)) {
-    				prop_dev(button2, "disabled", button2_disabled_value);
+    			if (!current || dirty[0] & /*$address*/ 4 && button6_disabled_value !== (button6_disabled_value = /*$address*/ ctx[2].count <= 1)) {
+    				prop_dev(button6, "disabled", button6_disabled_value);
     			}
 
-    			if (!current || dirty[0] & /*$address, bookLength*/ 544 && button3_disabled_value !== (button3_disabled_value = /*$address*/ ctx[5].verse + /*$address*/ ctx[5].count > /*bookLength*/ ctx[9])) {
-    				prop_dev(button3, "disabled", button3_disabled_value);
+    			if (!current || dirty[0] & /*$address, chapterLength*/ 68 && button7_disabled_value !== (button7_disabled_value = /*$address*/ ctx[2].verse + /*$address*/ ctx[2].count > /*chapterLength*/ ctx[6])) {
+    				prop_dev(button7, "disabled", button7_disabled_value);
     			}
 
-    			if (!current || dirty[0] & /*$address*/ 32 && button4_disabled_value !== (button4_disabled_value = /*$address*/ ctx[5].verse <= 1)) {
-    				prop_dev(button4, "disabled", button4_disabled_value);
+    			if (!current || dirty[0] & /*$address*/ 4 && button8_disabled_value !== (button8_disabled_value = /*$address*/ ctx[2].verse <= 1)) {
+    				prop_dev(button8, "disabled", button8_disabled_value);
     			}
 
-    			if (!current || dirty[0] & /*$address, bookLength*/ 544 && button5_disabled_value !== (button5_disabled_value = /*$address*/ ctx[5].verse + /*$address*/ ctx[5].count > /*bookLength*/ ctx[9])) {
-    				prop_dev(button5, "disabled", button5_disabled_value);
+    			if (!current || dirty[0] & /*$address, chapterLength*/ 68 && button9_disabled_value !== (button9_disabled_value = /*$address*/ ctx[2].verse + /*$address*/ ctx[2].count > /*chapterLength*/ ctx[6])) {
+    				prop_dev(button9, "disabled", button9_disabled_value);
     			}
 
-    			if (!current || dirty[0] & /*$line1*/ 64) set_data_dev(t24, /*$line1*/ ctx[6]);
-    			if (!current || dirty[0] & /*$line2*/ 128) span.innerHTML = /*$line2*/ ctx[7];
+    			if (!current || dirty[0] & /*$line1*/ 1024) set_data_dev(t38, /*$line1*/ ctx[10]);
+    			if (!current || dirty[0] & /*$line2*/ 512) p.innerHTML = /*$line2*/ ctx[9];
     			if (dirty[0] & /*$bodyclass*/ 2048) {
     				select_option(select0, /*$bodyclass*/ ctx[11]);
     			}
 
-    			if (dirty[0] & /*$bibleid*/ 16) {
-    				select_option(select1, /*$bibleid*/ ctx[4]);
+    			if (dirty[0] & /*$bibleid*/ 8) {
+    				select_option(select1, /*$bibleid*/ ctx[3]);
     			}
 
-    			if (/*loadingBible*/ ctx[0]) {
+    			if (/*loadingBible*/ ctx[4]) {
     				if (if_block2) {
     					if_block2.p(ctx, dirty);
     				} else {
@@ -1672,19 +1705,19 @@ var app = (function () {
     			if (detaching) detach_dev(div3);
     			destroy_component(keypad0);
     			if_block0.d();
-    			if (detaching) detach_dev(t9);
+    			if (detaching) detach_dev(t16);
     			if (detaching) detach_dev(div4);
     			if (if_block1) if_block1.d();
     			destroy_component(keypad1);
-    			if (detaching) detach_dev(t23);
+    			if (detaching) detach_dev(t37);
     			if (detaching) detach_dev(div5);
-    			if (detaching) detach_dev(t25);
-    			if (detaching) detach_dev(span);
-    			if (detaching) detach_dev(t26);
-    			if (detaching) detach_dev(br1);
-    			if (detaching) detach_dev(t27);
+    			if (detaching) detach_dev(t39);
+    			if (detaching) detach_dev(p);
+    			if (detaching) detach_dev(t40);
+    			if (detaching) detach_dev(br3);
+    			if (detaching) detach_dev(t41);
     			if (detaching) detach_dev(div6);
-    			if (detaching) detach_dev(t32);
+    			if (detaching) detach_dev(t46);
     			if (detaching) detach_dev(div7);
     			if (if_block2) if_block2.d();
     			mounted = false;
@@ -1694,7 +1727,7 @@ var app = (function () {
 
     	dispatch_dev("SvelteRegisterBlock", {
     		block,
-    		id: create_fragment$1.name,
+    		id: create_fragment.name,
     		type: "component",
     		source: "",
     		ctx
@@ -1707,16 +1740,20 @@ var app = (function () {
     	return a.book == b.book && a.chapter == b.chapter && a.verse == b.verse && a.count == b.count;
     }
 
-    function instance$1($$self, $$props, $$invalidate) {
-    	let $bibleid;
+    function instance($$self, $$props, $$invalidate) {
+    	let filteredBooks;
+    	let chapterLength;
+    	let bookLength;
     	let $address;
-    	let $line1;
-    	let $line2;
     	let $shown;
+    	let $bibleid;
+    	let $line2;
+    	let $line1;
     	let $bodyclass;
     	let { $$slots: slots = {}, $$scope } = $$props;
-    	validate_slots("App", slots, []);
+    	validate_slots('App', slots, []);
     	let loadingBible;
+    	let loadingBook;
 
     	let defaultAddress = {
     		book: "gn",
@@ -1729,31 +1766,31 @@ var app = (function () {
     	let booksByAbbr = new Map();
     	let bookFilter = "";
     	let shownBook;
-    	let lastAddresses = [defaultAddress];
-    	GUN_SUPER_PEERS = GUN_SUPER_PEERS || ["http://127.0.0.1/gun"];
+    	let lastAddresses = JSON.parse(window.sessionStorage.getItem('lastAddresses') || "null") || [defaultAddress];
+    	GUN_SUPER_PEERS = GUN_SUPER_PEERS || ['http://127.0.0.1/gun'];
     	let gun = Gun(GUN_SUPER_PEERS);
-    	let overlay = gun.get("bible").get(window.location.hash || "demo");
+    	let overlay = gun.get('bible').get(window.location.hash || 'demo');
 
     	/* Synced variables */
-    	let shown = writableGun(overlay.get("show"), false);
+    	let shown = writableGun(overlay.get('show'), false);
 
-    	validate_store(shown, "shown");
-    	component_subscribe($$self, shown, value => $$invalidate(10, $shown = value));
-    	let line1 = writableGun(overlay.get("line1"), "");
-    	validate_store(line1, "line1");
-    	component_subscribe($$self, line1, value => $$invalidate(6, $line1 = value));
-    	let line2 = writableGun(overlay.get("line2"), "");
-    	validate_store(line2, "line2");
-    	component_subscribe($$self, line2, value => $$invalidate(7, $line2 = value));
-    	let address = writableGun(overlay.get("address"), defaultAddress);
-    	validate_store(address, "address");
-    	component_subscribe($$self, address, value => $$invalidate(5, $address = value));
-    	let bodyclass = writableGun(overlay.get("bodyclass"), "");
-    	validate_store(bodyclass, "bodyclass");
+    	validate_store(shown, 'shown');
+    	component_subscribe($$self, shown, value => $$invalidate(8, $shown = value));
+    	let line1 = writableGun(overlay.get('line1'), '');
+    	validate_store(line1, 'line1');
+    	component_subscribe($$self, line1, value => $$invalidate(10, $line1 = value));
+    	let line2 = writableGun(overlay.get('line2'), '');
+    	validate_store(line2, 'line2');
+    	component_subscribe($$self, line2, value => $$invalidate(9, $line2 = value));
+    	let address = writableGun(overlay.get('address'), defaultAddress);
+    	validate_store(address, 'address');
+    	component_subscribe($$self, address, value => $$invalidate(2, $address = value));
+    	let bodyclass = writableGun(overlay.get('bodyclass'), '');
+    	validate_store(bodyclass, 'bodyclass');
     	component_subscribe($$self, bodyclass, value => $$invalidate(11, $bodyclass = value));
-    	let bibleid = writableGun(overlay.get("bibleid"), "roh");
-    	validate_store(bibleid, "bibleid");
-    	component_subscribe($$self, bibleid, value => $$invalidate(4, $bibleid = value));
+    	let bibleid = writableGun(overlay.get('bibleid'), 'roh');
+    	validate_store(bibleid, 'bibleid');
+    	component_subscribe($$self, bibleid, value => $$invalidate(3, $bibleid = value));
 
     	/* Disabled last address filtering
     $: filteredLastAddresses = bookFilter
@@ -1761,32 +1798,50 @@ var app = (function () {
       : lastAddresses;
     */
     	function loadBible(path) {
-    		$$invalidate(0, loadingBible = true);
-    		console.log("Loading Bible", path);
+    		$$invalidate(4, loadingBible = true);
+    		console.log('Loading Bible', path);
     		let request = new XMLHttpRequest();
-    		request.open("GET", path);
-    		request.responseType = "json";
+    		request.open('GET', path);
+    		request.responseType = 'json';
     		request.send();
 
     		request.onload = function () {
-    			$$invalidate(32, books = request.response.books);
+    			$$invalidate(26, books = request.response.books || []);
 
-    			books && books.forEach(book => {
-    				$$invalidate(33, booksByAbbr[book.abbreviation] = book, booksByAbbr);
-    			});
+    			for (let i = 0; i < books.length; i++) {
+    				$$invalidate(26, books[i].index = i, books);
+    				$$invalidate(27, booksByAbbr[books[i].abbreviation] = books[i], booksByAbbr);
+    			}
 
     			/* Redraw */
-    			$$invalidate(3, lastAddresses);
+    			$$invalidate(1, lastAddresses);
 
-    			// $address = $address;
-    			$$invalidate(0, loadingBible = false);
+    			$$invalidate(4, loadingBible = false);
+    		};
+    	}
+
+    	function loadBook(abbreviation) {
+    		loadingBook = true;
+    		console.log('Loading book', abbreviation);
+    		let request = new XMLHttpRequest();
+    		request.open('GET', $bibleid + '/' + abbreviation + '.json');
+    		request.responseType = 'json';
+    		request.send();
+
+    		request.onload = function () {
+    			$$invalidate(27, booksByAbbr[abbreviation].chapters = request.response, booksByAbbr);
+
+    			/* Redraw */
+    			address.set($address);
+
+    			loadingBook = false;
     		};
     	}
 
     	function matchesBook(book) {
-    		const prefix = bookFilter.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    		const bookLower = book.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    		return bookLower.startsWith(prefix) || book.abbreviation.startsWith(prefix) || book.aliases && book.aliases.some(a => a.toLowerCase().startsWith(prefix)) || prefix.length >= 2 && bookLower.includes(" " + prefix);
+    		const prefix = bookFilter.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    		const bookLower = book.name.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    		return bookLower.startsWith(prefix) || book.abbreviation.startsWith(prefix) || book.aliases && book.aliases.some(a => a.toLowerCase().startsWith(prefix)) || prefix.length >= 2 && bookLower.includes(' ' + prefix);
     	}
 
     	function addToLastAddresses(address) {
@@ -1797,18 +1852,18 @@ var app = (function () {
     			count: address.count
     		});
 
-    		$$invalidate(3, lastAddresses = lastAddresses.filter((h, i) => i === 0 || !equalAddresses(h, address)));
+    		$$invalidate(1, lastAddresses = lastAddresses.filter((h, i) => i === 0 || !equalAddresses(h, address)));
     	}
 
     	function addressAsString(address) {
-    		if (!booksByAbbr[address.book]) return "";
-    		var s = booksByAbbr[address.book].name + " " + address.chapter;
+    		if (!booksByAbbr[address.book]) return '';
+    		var s = booksByAbbr[address.book].name + ' ' + address.chapter;
 
     		if (address.verse) {
-    			s += "," + address.verse;
+    			s += ',' + address.verse;
 
     			if (address.count > 1) {
-    				s += "-" + (address.verse + address.count - 1);
+    				s += '-' + (address.verse + address.count - 1);
     			}
     		}
 
@@ -1817,11 +1872,18 @@ var app = (function () {
 
     	function addressContent(a) {
     		var book = booksByAbbr[a.book];
-    		var content = "";
+    		var content = '';
 
-    		if (book && $address.verse && book.chapters[$address.chapter]) {
-    			for (var i = $address.verse; i < $address.verse + $address.count; i++) {
-    				content += "\n" + (book.chapters[$address.chapter][i - 1] || "");
+    		if (book && $address.verse) {
+    			if (!book.chapters) {
+    				loadBook(a.book);
+    				return content;
+    			}
+
+    			if (book.chapters[$address.chapter]) {
+    				for (var i = $address.verse; i < $address.verse + $address.count; i++) {
+    					content += '\n' + (book.chapters[$address.chapter][i - 1] || '');
+    				}
     			}
     		}
 
@@ -1831,19 +1893,19 @@ var app = (function () {
     	
 
     	function addressSelector(a) {
-    		a.chapter = a.chapter || "";
-    		a.verse = a.verse || "";
+    		a.chapter = a.chapter || '';
+    		a.verse = a.verse || '';
     		a.count = a.count || 1;
 
     		return function () {
-    			console.debug("addressSelector:");
+    			console.debug('addressSelector:');
     			set_store_value(address, $address = a, $address);
     		};
     	}
 
     	function removeLastAddress(j) {
     		return function () {
-    			$$invalidate(3, lastAddresses = lastAddresses.filter((h, i) => i !== j));
+    			$$invalidate(1, lastAddresses = lastAddresses.filter((h, i) => i !== j));
     		};
     	}
 
@@ -1855,29 +1917,93 @@ var app = (function () {
     		}
     	}
 
+    	function decrementVerse() {
+    		set_store_value(address, $address.verse = +$address.verse - 1, $address);
+
+    		if ($address.verse <= 0) {
+    			decrementChapter();
+    			$$invalidate(6, chapterLength = booksByAbbr[$address.book].chapters[$address.chapter].length);
+    			set_store_value(address, $address.verse = chapterLength, $address);
+    		}
+    	}
+
+    	
+
+    	function incrementVerse() {
+    		set_store_value(address, $address.verse = +$address.verse + 1, $address);
+
+    		if ($address.verse > chapterLength) {
+    			incrementChapter();
+    			set_store_value(address, $address.verse = 1, $address);
+    		}
+    	}
+
+    	
+
+    	function decrementChapter() {
+    		set_store_value(address, $address.chapter = +$address.chapter - 1, $address);
+
+    		if ($address.chapter <= 0) {
+    			decrementBook();
+    			set_store_value(address, $address.chapter = Object.keys(booksByAbbr[$address.book].chapters || {}).length, $address);
+    		}
+    	}
+
+    	
+
+    	function incrementChapter() {
+    		set_store_value(address, $address.chapter = +$address.chapter + 1, $address);
+
+    		if ($address.chapter > bookLength) {
+    			incrementBook();
+    			set_store_value(address, $address.chapter = 1, $address);
+    			set_store_value(address, $address.verse = 1, $address);
+    		}
+    	}
+
+    	
+
+    	function decrementBook() {
+    		const newIndex = booksByAbbr[$address.book].index - 1 + books.length;
+    		set_store_value(address, $address.book = books[newIndex % books.length].abbreviation, $address);
+    		console.log('newIndex', newIndex, $address.book);
+    	}
+
+    	
+
+    	function incrementBook() {
+    		const newIndex = booksByAbbr[$address.book].index + 1;
+    		set_store_value(address, $address.book = books[newIndex % books.length].abbreviation, $address);
+    	}
+
+    	
     	const writable_props = [];
 
     	Object_1.keys($$props).forEach(key => {
-    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== "$$") console_1.warn(`<App> was created with unknown prop '${key}'`);
+    		if (!~writable_props.indexOf(key) && key.slice(0, 2) !== '$$' && key !== 'slot') console_1.warn(`<App> was created with unknown prop '${key}'`);
     	});
 
     	function input_input_handler() {
     		bookFilter = this.value;
-    		$$invalidate(1, bookFilter);
+    		$$invalidate(0, bookFilter);
     	}
 
     	const click_handler = () => {
-    		$$invalidate(1, bookFilter = "");
+    		$$invalidate(0, bookFilter = '');
     	};
 
     	function keypad0_value_binding(value) {
-    		$address.chapter = value;
-    		address.set($address);
+    		if ($$self.$$.not_equal($address.chapter, value)) {
+    			$address.chapter = value;
+    			address.set($address);
+    		}
     	}
 
     	function keypad1_value_binding(value) {
-    		$address.verse = value;
-    		address.set($address);
+    		if ($$self.$$.not_equal($address.verse, value)) {
+    			$address.verse = value;
+    			address.set($address);
+    		}
     	}
 
     	const click_handler_1 = function () {
@@ -1893,7 +2019,7 @@ var app = (function () {
     	};
 
     	const click_handler_4 = function () {
-    		set_store_value(address, $address.verse = Math.min($address.verse + $address.count, bookLength - 1), $address);
+    		set_store_value(address, $address.verse = Math.min($address.verse + $address.count, chapterLength - 1), $address);
     	};
 
     	function select0_change_handler() {
@@ -1912,6 +2038,7 @@ var app = (function () {
     		Keypad,
     		writableGun,
     		loadingBible,
+    		loadingBook,
     		defaultAddress,
     		books,
     		booksByAbbr,
@@ -1927,6 +2054,7 @@ var app = (function () {
     		bodyclass,
     		bibleid,
     		loadBible,
+    		loadBook,
     		matchesBook,
     		addToLastAddresses,
     		addressAsString,
@@ -1935,81 +2063,95 @@ var app = (function () {
     		addressSelector,
     		removeLastAddress,
     		toggleLine,
-    		$bibleid,
-    		$address,
-    		$line1,
-    		$line2,
-    		filteredBooks,
+    		decrementVerse,
+    		incrementVerse,
+    		decrementChapter,
+    		incrementChapter,
+    		decrementBook,
+    		incrementBook,
     		bookLength,
+    		chapterLength,
+    		filteredBooks,
+    		$address,
     		$shown,
+    		$bibleid,
+    		$line2,
+    		$line1,
     		$bodyclass
     	});
 
     	$$self.$inject_state = $$props => {
-    		if ("loadingBible" in $$props) $$invalidate(0, loadingBible = $$props.loadingBible);
-    		if ("defaultAddress" in $$props) defaultAddress = $$props.defaultAddress;
-    		if ("books" in $$props) $$invalidate(32, books = $$props.books);
-    		if ("booksByAbbr" in $$props) $$invalidate(33, booksByAbbr = $$props.booksByAbbr);
-    		if ("bookFilter" in $$props) $$invalidate(1, bookFilter = $$props.bookFilter);
-    		if ("shownBook" in $$props) $$invalidate(2, shownBook = $$props.shownBook);
-    		if ("lastAddresses" in $$props) $$invalidate(3, lastAddresses = $$props.lastAddresses);
-    		if ("gun" in $$props) gun = $$props.gun;
-    		if ("overlay" in $$props) overlay = $$props.overlay;
-    		if ("shown" in $$props) $$invalidate(12, shown = $$props.shown);
-    		if ("line1" in $$props) $$invalidate(13, line1 = $$props.line1);
-    		if ("line2" in $$props) $$invalidate(14, line2 = $$props.line2);
-    		if ("address" in $$props) $$invalidate(15, address = $$props.address);
-    		if ("bodyclass" in $$props) $$invalidate(16, bodyclass = $$props.bodyclass);
-    		if ("bibleid" in $$props) $$invalidate(17, bibleid = $$props.bibleid);
-    		if ("filteredBooks" in $$props) $$invalidate(8, filteredBooks = $$props.filteredBooks);
-    		if ("bookLength" in $$props) $$invalidate(9, bookLength = $$props.bookLength);
+    		if ('loadingBible' in $$props) $$invalidate(4, loadingBible = $$props.loadingBible);
+    		if ('loadingBook' in $$props) loadingBook = $$props.loadingBook;
+    		if ('defaultAddress' in $$props) defaultAddress = $$props.defaultAddress;
+    		if ('books' in $$props) $$invalidate(26, books = $$props.books);
+    		if ('booksByAbbr' in $$props) $$invalidate(27, booksByAbbr = $$props.booksByAbbr);
+    		if ('bookFilter' in $$props) $$invalidate(0, bookFilter = $$props.bookFilter);
+    		if ('shownBook' in $$props) $$invalidate(28, shownBook = $$props.shownBook);
+    		if ('lastAddresses' in $$props) $$invalidate(1, lastAddresses = $$props.lastAddresses);
+    		if ('gun' in $$props) gun = $$props.gun;
+    		if ('overlay' in $$props) overlay = $$props.overlay;
+    		if ('shown' in $$props) $$invalidate(12, shown = $$props.shown);
+    		if ('line1' in $$props) $$invalidate(13, line1 = $$props.line1);
+    		if ('line2' in $$props) $$invalidate(14, line2 = $$props.line2);
+    		if ('address' in $$props) $$invalidate(15, address = $$props.address);
+    		if ('bodyclass' in $$props) $$invalidate(16, bodyclass = $$props.bodyclass);
+    		if ('bibleid' in $$props) $$invalidate(17, bibleid = $$props.bibleid);
+    		if ('bookLength' in $$props) $$invalidate(5, bookLength = $$props.bookLength);
+    		if ('chapterLength' in $$props) $$invalidate(6, chapterLength = $$props.chapterLength);
+    		if ('filteredBooks' in $$props) $$invalidate(7, filteredBooks = $$props.filteredBooks);
     	};
-
-    	let filteredBooks;
-    	let bookLength;
 
     	if ($$props && "$$inject" in $$props) {
     		$$self.$inject_state($$props.$$inject);
     	}
 
     	$$self.$$.update = () => {
-    		if ($$self.$$.dirty[0] & /*$bibleid*/ 16) {
-    			 loadBible($bibleid + ".json");
+    		if ($$self.$$.dirty[0] & /*$bibleid*/ 8) {
+    			loadBible($bibleid + '/index.json');
     		}
 
-    		if ($$self.$$.dirty[0] & /*$address*/ 32 | $$self.$$.dirty[1] & /*booksByAbbr*/ 4) {
-    			 $$invalidate(2, shownBook = booksByAbbr[$address.book] || { chapters: [], name: "" });
+    		if ($$self.$$.dirty[0] & /*booksByAbbr, $address*/ 134217732) {
+    			$$invalidate(28, shownBook = booksByAbbr[$address.book] || { chapters: [], name: "" });
     		}
 
-    		if ($$self.$$.dirty[0] & /*$address*/ 32) {
-    			 set_store_value(line1, $line1 = addressAsString($address), $line1);
+    		if ($$self.$$.dirty[0] & /*$address*/ 4) {
+    			set_store_value(line1, $line1 = addressAsString($address), $line1);
     		}
 
-    		if ($$self.$$.dirty[0] & /*$address*/ 32) {
-    			 set_store_value(line2, $line2 = addressContent($address), $line2);
+    		if ($$self.$$.dirty[0] & /*$address*/ 4) {
+    			set_store_value(line2, $line2 = addressContent($address), $line2);
     		}
 
-    		if ($$self.$$.dirty[0] & /*bookFilter*/ 2 | $$self.$$.dirty[1] & /*books*/ 2) {
-    			 $$invalidate(8, filteredBooks = bookFilter ? books.filter(matchesBook) : books);
+    		if ($$self.$$.dirty[0] & /*bookFilter, books*/ 67108865) {
+    			$$invalidate(7, filteredBooks = bookFilter ? books.filter(matchesBook) : books);
     		}
 
-    		if ($$self.$$.dirty[0] & /*shownBook, $address*/ 36) {
-    			 $$invalidate(9, bookLength = (shownBook.chapters[$address.chapter] || []).length);
+    		if ($$self.$$.dirty[0] & /*shownBook, $address*/ 268435460) {
+    			$$invalidate(6, chapterLength = ((shownBook.chapters || {})[$address.chapter] || []).length);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*shownBook*/ 268435456) {
+    			$$invalidate(5, bookLength = Object.keys(shownBook.chapters || {}).length);
+    		}
+
+    		if ($$self.$$.dirty[0] & /*lastAddresses*/ 2) {
+    			window.sessionStorage.setItem('lastAddresses', JSON.stringify(lastAddresses));
     		}
     	};
 
     	return [
-    		loadingBible,
     		bookFilter,
-    		shownBook,
     		lastAddresses,
-    		$bibleid,
     		$address,
-    		$line1,
-    		$line2,
-    		filteredBooks,
+    		$bibleid,
+    		loadingBible,
     		bookLength,
+    		chapterLength,
+    		filteredBooks,
     		$shown,
+    		$line2,
+    		$line1,
     		$bodyclass,
     		shown,
     		line1,
@@ -2021,6 +2163,13 @@ var app = (function () {
     		addressSelector,
     		removeLastAddress,
     		toggleLine,
+    		decrementVerse,
+    		incrementVerse,
+    		decrementChapter,
+    		incrementChapter,
+    		books,
+    		booksByAbbr,
+    		shownBook,
     		input_input_handler,
     		click_handler,
     		keypad0_value_binding,
@@ -2037,13 +2186,13 @@ var app = (function () {
     class App extends SvelteComponentDev {
     	constructor(options) {
     		super(options);
-    		init(this, options, instance$1, create_fragment$1, safe_not_equal, {}, [-1, -1]);
+    		init(this, options, instance, create_fragment, safe_not_equal, {}, null, [-1, -1]);
 
     		dispatch_dev("SvelteRegisterComponent", {
     			component: this,
     			tagName: "App",
     			options,
-    			id: create_fragment$1.name
+    			id: create_fragment.name
     		});
     	}
     }
