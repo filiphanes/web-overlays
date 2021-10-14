@@ -218,7 +218,7 @@
   {/each}
 </div>
 
-<div style="display: inline-block; margin: .5rem; vertical-align: top;">
+<div style="display: inline-block; margin: .5rem 0 0 0; vertical-align: top;">
   Kapitola: {$address.chapter} z {bookLength}
   <Keypad bind:value={$address.chapter} max={bookLength} />
   <button class="btn btn-primary" on:click={decrementChapter} style="line-height: 2rem;">-1</button>
