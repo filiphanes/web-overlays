@@ -7,3 +7,10 @@ ehthumbs.db
 Thumbs.db
 node_modules/
 radata/
+node_modules
+/build
+/.svelte-kit
+/package
+.env
+.env.*
+!.env.example

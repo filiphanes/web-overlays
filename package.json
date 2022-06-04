@@ -1,11 +1,24 @@
 {
-  "name": "websocket-overlay",
+  "name": "gun-overlays",
   "version": "1.0.0",
   "description": "HTML5 overlays controlled via websocket server from controller.html",
+  "author": "Filip Hanes <filip@hanes.tech>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/filiphanes/gun-overlays/issues"
+  },
+  "homepage": "https://github.com/filiphanes/gun-overlays#readme",
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "svelte-kit dev",
+    "build": "svelte-kit build",
+    "package": "svelte-kit package",
+    "preview": "svelte-kit preview",
+    "prepare": "svelte-kit sync && npm run smui-theme-light && npm run smui-theme-dark",
+    "smui-theme-light": "smui-theme compile static/smui.css -i src/theme",
+    "smui-theme-dark": "smui-theme compile static/smui-dark.css -i src/theme/dark"
   },
   "repository": {
     "type": "git",
@@ -18,15 +31,15 @@
     "obs-studio",
     "splitx",
     "casparcg",
+    "propresenter",
     "broadcast"
   ],
-  "author": "Filip Hanes <filip.hanes@protonmail.com>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/filiphanes/gun-overlays/issues"
+  "devDependencies": {
+    "@sveltejs/adapter-static": "1.0.0-next.30",
+    "@sveltejs/kit": "next",
+    "gun": "^0.2020.1232",
+    "svelte": "^3.44.0",
+    "wrangler": "^2.0.5"
   },
-  "homepage": "https://github.com/filiphanes/gun-overlays#readme",
-  "dependencies": {
-    "gun": "^0.2020.1232"
-  }
+  "type": "module"
 }
