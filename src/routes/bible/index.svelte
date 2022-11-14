@@ -6,8 +6,9 @@
   import { page } from "$app/stores";
   import {index as roh} from "./roh.json.js"
   import {index as seb} from "./seb.json.js"
+  import {index as sep} from "./sep.json.js"
 
-  let bibles = {roh, seb};
+  let bibles = {roh, seb, sep};
   let loadingBible;
   let loadingBook;
 
@@ -262,6 +263,7 @@
     <select bind:value={$bibleid}>
       <option value="roh">Roháčkov</option>
       <option value="seb">Ekumenický</option>
+      <option value="sep">Evanjelický</option>
     </select> {#if loadingBible}Nahráva sa preklad {$bibleid}.{/if}
   </div>
 </div>
