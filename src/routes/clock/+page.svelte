@@ -11,12 +11,13 @@
 	let circleClock = {style:{}};
 	let configBar = {style:{}};
     let config = {
-        showSeconds: "true",
-        showCircleClock: "true",
-        twentyFourHours: "true",
-        digiClockColor: "#FFFFFF",
-        digiClockSize: "30",
+        showSeconds: "",
+        showCircleClock: "1",
+        twentyFourHours: "1",
+        digiClockColor: "#F0F0F0",
+        digiClockSize: "50",
         circleClockSize: "50",
+        alertAfter: "",
         note: "",
     };
 
@@ -68,7 +69,11 @@
         }
         millis = time.getMilliseconds();
     }
- </script>
+</script>
+
+<svelte:head>
+	<title>Clock</title>
+</svelte:head>
 
 <div class="container" on:click={handleClick}>
 <span class="digital-clock" bind:this={digiClock}>
@@ -135,8 +140,9 @@
 
     .digital-clock {
         color: white;
-        font-family: "7segment";
+        /* font-family: "7segment"; */
         font-size: 30vh;
+        font-weight: 100;
         /* margin-top: 33vh; */
         text-align: center;
     }

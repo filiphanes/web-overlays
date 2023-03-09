@@ -425,6 +425,10 @@
   }
 </style>
 
+<svelte:head>
+	<title>Songs controller</title>
+</svelte:head>
+
 <div class="input-group" style="width: 100%; display: flex;">
   <input class="form-control" type="text" placeholder="filter piesní"
     bind:value={songFilter}

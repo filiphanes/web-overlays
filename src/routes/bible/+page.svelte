@@ -63,7 +63,7 @@
   function loadBook(abbreviation) {
     loadingBook = true;
     console.log('Loading book', abbreviation)
-    fetch($bibleid + '/' + abbreviation + '.json')
+    fetch('/bible/' + $bibleid + '/' + abbreviation + '.json')
     .then(response => response.json())
     .then(data => {
       booksByAbbr[abbreviation].chapters = data;

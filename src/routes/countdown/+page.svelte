@@ -10,13 +10,13 @@
 	let M = 1;
 	let S = 0;
   let config = {
-      countDown: "60",
+      countDown: "420",
       showSeconds: "1",
-      showHours: "1",
-      showCircleClock: "1",
+      showHours: "",
+      showCircleClock: "",
       digiClockColor: "#FFFFFF",
       digiClockColorNegative: "#FF0000",
-      digiClockSize: "30",
+      digiClockSize: "50",
       circleClockSize: "50",
       note: "",
   };
@@ -78,7 +78,10 @@
 
     S = Math.floor((countDownTo - +time)/1000);
     isNegative = S < 0;
-    if (isNegative) S = -S;
+    if (isNegative) {
+      S = -S;
+      digiClock.style.color = config.digiClockColorNegative;
+    }
     H = Math.floor(S / 3600);
     S -= H * 3600;
     M = Math.floor(S / 60);
@@ -92,6 +95,10 @@
     updateClock();
   }
  </script>
+
+<svelte:head>
+	<title>Countdown {config.countDown} s</title>
+</svelte:head>
 
 <div class="container" on:click={handleClick}>
 <span class="digital-clock" bind:this={digiClock}>
@@ -180,8 +187,9 @@
 
 .digital-clock {
   color: white;
-  font-family: "7segment";
+  /* font-family: "7segment"; */
   font-size: 30vh;
+  font-weight: 100;
   text-align: center;
 }
 .note {
