@@ -1,46 +1,68 @@
-<script>
+<script type="javascript">
   import { onMount } from "svelte";
   import NumberPad from "$lib/NumberPad.svelte";
-  import { gun } from '$lib/gun.js';
-  import { writableGun } from '$lib/stores.js';
+  import { Gun, wrapStore } from '$lib/gun.js';
   import { page } from "$app/stores";
+	import { writable } from 'svelte/store';
   import {index as roh} from "./roh.json.js"
   import {index as seb} from "./seb.json.js"
   import {index as sep} from "./sep.json.js"
+  import {index as ssv} from "./ssv.json.js"
+  import {index as bot} from "./bot.json.js"
 
-  let bibles = {roh, seb, sep};
-  let loadingBible;
-  let loadingBook;
+  let bibles = {roh, seb, sep, ssv, bot};
+  let loadingBible = false;
+  let loadingBook = false;
 
-  let defaultAddress = { book: "gn", chapter: 1, verse: 1, count: 1 };
+  let defaultAddress = { book: "gn", chapter: 1, verse: 1, verseCount: 1 };
   let books = [];
   let booksByAbbr = new Map();
 
   let bookFilter = "";
   let shownBook;
   let lastAddresses = [defaultAddress,];
+  let address = {...defaultAddress};
 
-  let overlay = gun.get('bible').get($page.url.hash || 'demo');
+  let overlay;
 
   /* Synced variables */
-  let shown = writableGun(overlay.get('show'), false);
-  let line1 = writableGun(overlay.get('line1'), '');
-  let line2 = writableGun(overlay.get('line2'), '');
-  let address = writableGun(overlay.get('address'), defaultAddress);
-  let theme = writableGun(overlay.get('theme'), '');
-  let bibleid = writableGun(overlay.get('bibleid'), 'roh');
+  let shown   = writable(false);
+  let line1   = writable('line1');
+  let line2   = writable('line2');
+  let book    = writable(defaultAddress.book);
+  let chapter = writable(defaultAddress.chapter);
+  let verse   = writable(defaultAddress.verse);
+  let verseCount = writable(defaultAddress.verseCount);
+  let theme   = writable('');
+  let bibleid = writable('roh');
 
 	onMount(() => {
+    const gun = Gun([
+        'https://gun.filiphanes.sk/gun',
+    ])
+
     overlay = gun.get('bible').get($page.url.hash || 'demo');
+    /* Synced variables */
+    shown   = wrapStore(overlay.get('show'), shown);
+    line1   = wrapStore(overlay.get('line1'), line1);
+    line2   = wrapStore(overlay.get('line2'), line2);
+    book    = wrapStore(overlay.get('book'), book);
+    chapter = wrapStore(overlay.get('chapter'), chapter);
+    verse   = wrapStore(overlay.get('verse'), verse);
+    verseCount = wrapStore(overlay.get('verseCount'), verseCount);
+    theme   = wrapStore(overlay.get('theme'), theme);
+    bibleid = wrapStore(overlay.get('bibleid'), bibleid);
+
     return () => {};
   })
 
-  $: shownBook = booksByAbbr[$address.book] || { chapters: [], name: "" };
-  $: $line1 = addressAsString($address);
-  $: $line2 = addressContent($address);
-  $: loadBible($bibleid);
+  $: address = {bible: $bibleid, book: $book, chapter: $chapter, verse: $verse, verseCount: $verseCount};
+  $: $line1 = addressAsString(address);
+  $: $line2 = addressContent(address);
+  $: loadBible($bibleid || 'roh');
+  $: shownBook = booksByAbbr[$book] || { chapters: {}, name: "" };
   $: filteredBooks = bookFilter ? books.filter(matchesBook) : books;
-  $: chapterLength = ((shownBook.chapters||{})[$address.chapter]||[]).length;
+  $: chapterLength = ((shownBook.chapters||{})[$chapter]||[]).length;
   $: bookLength = Object.keys(shownBook.chapters||{}).length;
 
   /* Disabled last address filtering
@@ -50,8 +72,7 @@
   */
 
   function loadBible(bibleid) {
-    const data = bibles[bibleid];
-    books = data.books || [];
+    books = bibles[bibleid].books || [];
     for (let i=0; i<books.length; i++) {
       books[i].index = i;
       booksByAbbr[books[i].abbreviation] = books[i];
@@ -63,12 +84,12 @@
   function loadBook(abbreviation) {
     loadingBook = true;
     console.log('Loading book', abbreviation)
-    fetch('/bible/' + $bibleid + '/' + abbreviation + '.json')
+    fetch('/bible/' + ($bibleid || 'roh') + '/' + abbreviation + '.json')
     .then(response => response.json())
     .then(data => {
       booksByAbbr[abbreviation].chapters = data;
       /* Redraw */
-      $address = $address;
+      address = address;
       loadingBook = false;
     })
   }
@@ -89,34 +110,36 @@
       book: address.book,
       chapter: address.chapter,
       verse: address.verse,
-      count: address.count
+      verseCount: address.verseCount
     });
     lastAddresses = lastAddresses.filter((h, i) => i === 0 || !equalAddresses(h, address));
   }
 
   function addressAsString(address) {
+    if (address === undefined) return '';
     if (!booksByAbbr[address.book]) return '';
     var s = booksByAbbr[address.book].name + ' ' + address.chapter;
     if (address.verse) {
       s += ',' + address.verse;
-      if (address.count > 1) {
-        s += '-' + (address.verse + address.count - 1);
+      if (address.verseCount > 1) {
+        s += '-' + (address.verse + address.verseCount - 1);
       }
     }
     return s;
   }
 
-  function addressContent(a) {
-    var book = booksByAbbr[a.book];
+  function addressContent(address) {
+    if (address === undefined) return '';
     var content = '';
-    if (book && $address.verse) {
+    var book = booksByAbbr[address.book];
+    if (book) {
       if (!book.chapters) {
-        loadBook(a.book);
+        loadBook(address.book);
         return content;
       }
-      if (book.chapters[$address.chapter]) {
-        for (var i = $address.verse; i < $address.verse + $address.count; i++) {
-          content += '\n' + (book.chapters[$address.chapter][i - 1] || '');
+      if (address.verse && book.chapters[address.chapter]) {
+        for (var i = address.verse; i < address.verse + address.verseCount; i++) {
+          content += '\n' + (book.chapters[address.chapter][i - 1] || '');
         }
       }
     }
@@ -124,19 +147,22 @@
   };
 
   function equalAddresses(a, b) {
-    return a.book == b.book &&
+    return b !== undefined &&
+      a.book == b.book &&
       a.chapter == b.chapter &&
       a.verse == b.verse &&
-      a.count == b.count;
+      a.verseCount == b.verseCount;
   }
 
   function addressSelector(a) {
     a.chapter = a.chapter || '';
     a.verse = a.verse || '';
-    a.count = a.count || 1;
+    a.verseCount = a.verseCount || 1;
     return function () {
-      console.debug('addressSelector:');
-      $address = a;
+      $book = a.book;
+      $chapter = a.chapter;
+      $verse = a.verse;
+      $verseCount = a.verseCount;
     };
   }
 
@@ -149,53 +175,53 @@
   function toggleLine() {
     $shown = !$shown;
     if ($shown) {
-      addToLastAddresses($address);
+      addToLastAddresses(address);
     }
   }
 
   function decrementVerse() {
-    $address.verse = +$address.verse - 1;
-    if ($address.verse <= 0) {
+    $verse = +$verse - 1;
+    if ($verse <= 0) {
       decrementChapter();
-      chapterLength = booksByAbbr[$address.book].chapters[$address.chapter].length;
-      $address.verse = chapterLength;
+      chapterLength = booksByAbbr[$book].chapters[$chapter].length;
+      $verse = chapterLength;
     }
   };
 
   function incrementVerse() {
-    $address.verse = +$address.verse + 1;
-    if ($address.verse > chapterLength) {
+    $verse = +$verse + 1;
+    if ($verse > chapterLength) {
       incrementChapter();
-      $address.verse = 1;
+      $verse = 1;
     }
   };
 
   function decrementChapter() {
-    $address.chapter = +$address.chapter - 1;
-    if ($address.chapter <= 0) {
+    $chapter = +$chapter - 1;
+    if ($chapter <= 0) {
       decrementBook();
-      $address.chapter = Object.keys(booksByAbbr[$address.book].chapters||{}).length;
+      $chapter = Object.keys(booksByAbbr[$book].chapters||{}).length;
     }
   };
 
   function incrementChapter() {
-    $address.chapter = +$address.chapter + 1;
-    if ($address.chapter > bookLength) {
+    $chapter = +$chapter + 1;
+    if ($chapter > bookLength) {
       incrementBook();
-      $address.chapter = 1;
-      $address.verse = 1;
+      $chapter = 1;
+      $verse = 1;
     }
   };
 
   function decrementBook() {
-    const newIndex = booksByAbbr[$address.book].index - 1 + books.length;
-    $address.book = books[newIndex%books.length].abbreviation;
-    console.log('newIndex', newIndex, $address.book);
+    const newIndex = booksByAbbr[$book].index - 1 + books.length;
+    $book = books[newIndex%books.length].abbreviation;
+    console.log('newIndex', newIndex, $book);
   };
 
   function incrementBook() {
-    const newIndex = booksByAbbr[$address.book].index + 1;
-    $address.book = books[newIndex%books.length].abbreviation;
+    const newIndex = booksByAbbr[$book].index + 1;
+    $book = books[newIndex%books.length].abbreviation;
   };
 </script>
 
@@ -204,22 +230,22 @@
   <button type="button" class="form-control btn btn-secondary" on:click={()=>{bookFilter=''}} style="max-width: 2rem;">×</button>
 </div>
 <div class="books-filter">
-  {#each filteredBooks as book}
-  <button class="book-item btn" class:btn-primary={book.abbreviation==$address.book} on:click={addressSelector({book: book.abbreviation})}>{book.name}</button>
+  {#each filteredBooks as b}
+  <button class="book-item btn" class:btn-primary={b.abbreviation==$book} on:click={addressSelector({book: b.abbreviation})}>{b.name}</button>
   {/each}
 </div>
 <div class="address-filter">
   {#each lastAddresses as addr, i}
   <div class="address-item btn-group">
-    <button class="address-set btn" class:btn-primary={equalAddresses(addr, $address)} on:click={addressSelector(addr)}>{addressAsString(addr) || (addr.book+' '+addr.chapter+','+addr.verse)}</button>
+    <button class="address-set btn" class:btn-primary={equalAddresses(addr, address)} on:click={addressSelector(addr)}>{addressAsString(addr) || (addr.book+' '+addr.chapter+','+addr.verse)}</button>
     <button class="btn btn-secondary address-remove" on:click={removeLastAddress(i)}>×</button>
   </div>
   {/each}
 </div>
 
 <div style="display: inline-block; margin: .5rem; vertical-align: top;">
-  Kapitola: {$address.chapter} z {bookLength}
-  <NumberPad bind:value={$address.chapter} max={bookLength} />
+  Kapitola: {$chapter} z {bookLength}
+  <NumberPad bind:value={$chapter} max={bookLength} />
   <button class="btn btn-primary" on:click={decrementChapter} style="line-height: 2rem;">-1</button>
   <button class="btn btn-primary" on:click={incrementChapter} style="line-height: 2rem;">+1</button>
   <br />
@@ -228,18 +254,18 @@
   </button>
 </div>
 <div style="display: inline-block; margin: .5rem; vertical-align: top;">
-  Verš: {$address.verse} {#if $address.count>1} - {$address.verse + $address.count - 1}{/if} z {chapterLength}
-  <NumberPad bind:value={$address.verse} max={chapterLength} />
+  Verš: {$verse} {#if $verseCount>1} - {$verse + $verseCount - 1}{/if} z {chapterLength}
+  <NumberPad bind:value={$verse} max={chapterLength} />
   <button class="btn btn-primary" on:click={decrementVerse} style="line-height: 2rem;">-1</button>
   <button class="btn btn-primary" on:click={incrementVerse} style="line-height: 2rem;">+1</button>
   <br />
   <button disabled style="background: transparent;"></button>
-  <button class="btn btn-primary" on:click={function(){$address.count -=1 }} style="line-height: 2rem;" disabled={$address.count <=1 }>-1</button>
-  <button class="btn btn-primary" on:click={function(){$address.count +=1 }} style="line-height: 2rem;" disabled={$address.verse+$address.count> chapterLength}>+1</button>
+  <button class="btn btn-primary" on:click={function(){$verseCount -=1 }} style="line-height: 2rem;" disabled={$verseCount<=1}>-1</button>
+  <button class="btn btn-primary" on:click={function(){$verseCount +=1 }} style="line-height: 2rem;" disabled={$verseCount>chapterLength}>+1</button>
   <br />
   <button disabled style="background: transparent;"></button>
-  <button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$address.verse=Math.max(1,$address.verse-$address.count)}} disabled={$address.verse <=1 }>⇐</button>
-  <button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$address.verse=Math.min($address.verse+$address.count,chapterLength)}} disabled={$address.verse+$address.count> chapterLength}>⇒</button>
+  <button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$verse=Math.max(1,$verse-$verseCount)}} disabled={$verse <=1 }>⇐</button>
+  <button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$verse=Math.min($verse+$verseCount,chapterLength)}} disabled={$verse+$verseCount> chapterLength}>⇒</button>
 </div>
 
 <div class="preview">
@@ -249,6 +275,17 @@
 
 <br />
 <div class="settings">
+  <div class="bible">
+    Preklad:
+    <select bind:value={$bibleid}>
+      <option value="roh">Roháčkov</option>
+      <option value="seb">Ekumenický</option>
+      <option value="sep">Evanjelický</option>
+      <option value="ssv">Katolícky</option>
+      <option value="bot">Botekov</option>
+    </select> {#if loadingBible}Nahráva sa preklad {$bibleid}.{/if}
+  </div>
+
   <div class="theme">
     Téma:
     <select bind:value={$theme}>
@@ -256,15 +293,6 @@
       <option value="simple-with-shadow" selected>Jednoduché s tieňom</option>
       <option value="fullscreen-white-bg">Fullscreen biele pozadie</option>
     </select>
-  </div>
-
-  <div class="bible">
-    Preklad:
-    <select bind:value={$bibleid}>
-      <option value="roh">Roháčkov</option>
-      <option value="seb">Ekumenický</option>
-      <option value="sep">Evanjelický</option>
-    </select> {#if loadingBible}Nahráva sa preklad {$bibleid}.{/if}
   </div>
 </div>
 
@@ -277,7 +305,10 @@ select {
   padding: 0.4em;
   margin: 0 0 0.25em 0;
   box-sizing: border-box;
-  border: 1px solid #ccc;
+  border: none;
+  background: #555;
+  color: whitesmoke;
+  border-radius: .5rem;
 }
 
 input:disabled {
@@ -290,12 +321,13 @@ button {
   margin: 0 0 .25rem 0;
   line-height: 1rem;
   width: 2.8rem;
-  background: #7c8288;
+  background: #555;
   border: 0;
 }
 
 button:active {
   background-color: #ddd;
+  color: black;
 }
 
 button:focus {
@@ -311,7 +343,7 @@ button:focus {
 .address-filter {
   display: block;
   width: 49%;
-  margin: 0 1% 0 0;
+  margin: 0 1% 1remp 0;
   padding: 0;
   height: 10rem;
   overflow: scroll;
@@ -319,11 +351,16 @@ button:focus {
   max-width: 15rem;
 }
 
-.book-item {
+.book-item,
+.address-set,
+.address-remove {
   width: 100%;
-  margin: 0;
+  margin: 0 0 .1rem;
   padding: .5rem;
   text-align: left;
+  color: whitesmoke;
+  border-radius: 0;
+  background: black;;
 }
 
 .address-item {

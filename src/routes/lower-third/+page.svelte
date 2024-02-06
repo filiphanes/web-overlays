@@ -5,25 +5,28 @@
 
 <script>
   import { onMount } from "svelte";
-  import { gun } from '$lib/gun.js';
+  import { writable } from 'svelte/store';
+  import { Gun, wrapStore } from '$lib/gun.js';
   import { page } from "$app/stores";
-	let overlay = gun.get('scoreboard').get($page.url.hash || 'demo');
-  let line1 = "Text Line 1";
-  let line2 = "Text Line 2"
+  let showStore = writable(false);
+  let line1 = writable("Text Line 1");
+  let line2 = writable("Text Line 2");
 		
   onMount(function(){
-		overlay.get('line1').on(function(data, key){line1 = data});
-		overlay.get('line2').on(function(data, key){line2 = data});
+    const gun = Gun([
+        'https://gun.filiphanes.sk/gun',
+    ])
+    let overlay = gun.get('scoreboard').get($page.url.hash || 'demo');
+    showStore = wrapStore(overlay.get('show'), showStore);
+    line1 = wrapStore(overlay.get('line1'), line1);
+    line2 = wrapStore(overlay.get('line2'), line2);
   });
 	
-	function show() {
-    overlay.get('show').put(true)
+  function show() {
+    $showStore = true;
   }
-	function hide() {
-    overlay.get('show').put(false)
-  }
-	function change(event) {
-    overlay.get(event.target.id).put(element.target.value);
+  function hide() {
+    $showStore = false;
   }
   </script>
 
@@ -34,8 +37,8 @@
 				<div class="card-body">
 					<h5 class="card-title">Lower Third control</h5>
 					<div class="form-group">
-						<input class="form-control" type="text" id="line1" bind:value={line1} on:change={change}>
-						<input class="form-control" type="text" id="line2" bind:value={line2} on:change={change}>
+						<input class="form-control" type="text" id="line1" bind:value={$line1}>
+						<input class="form-control" type="text" id="line2" bind:value={$line2}>
 					</div>
 					<div>
 						<button class="btn btn-lg btn-success" on:click={show}>Show</button>

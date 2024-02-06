@@ -16,21 +16,21 @@
 </script>
 
 <div class="numberpad">
-  <button class="btn btn-primary" on:click={select(1)}>1</button>
-  <button class="btn btn-primary" on:click={select(2)}>2</button>
-  <button class="btn btn-primary" on:click={select(3)}>3</button>
+  <button class="btn btn-primary" on:keyup={select(1)} on:click={select(1)}>1</button>
+  <button class="btn btn-primary" on:keyup={select(2)} on:click={select(2)}>2</button>
+  <button class="btn btn-primary" on:keyup={select(3)} on:click={select(3)}>3</button>
 
-  <button class="btn btn-primary" on:click={select(4)}>4</button>
-  <button class="btn btn-primary" on:click={select(5)}>5</button>
-  <button class="btn btn-primary" on:click={select(6)}>6</button>
+  <button class="btn btn-primary" on:keyup={select(4)} on:click={select(4)}>4</button>
+  <button class="btn btn-primary" on:keyup={select(5)} on:click={select(5)}>5</button>
+  <button class="btn btn-primary" on:keyup={select(6)} on:click={select(6)}>6</button>
 
-  <button class="btn btn-primary" on:click={select(7)}>7</button>
-  <button class="btn btn-primary" on:click={select(8)}>8</button>
-  <button class="btn btn-primary" on:click={select(9)}>9</button>
+  <button class="btn btn-primary" on:keyup={select(7)} on:click={select(7)}>7</button>
+  <button class="btn btn-primary" on:keyup={select(8)} on:click={select(8)}>8</button>
+  <button class="btn btn-primary" on:keyup={select(9)} on:click={select(9)}>9</button>
 
-  <button class="btn btn-primary" on:click={backspace} disabled={!value}>←</button>
-  <button class="btn btn-primary" on:click={select(0)}>0</button>
-  <button class="btn btn-primary" on:click={clear} disabled={!value} >C</button>
+  <button class="btn btn-primary" on:keyup={backspace} on:click={backspace} disabled={!value}>←</button>
+  <button class="btn btn-primary" on:keyup={select(0)} on:click={select(0)}>0</button>
+  <button class="btn btn-primary" on:keyup={clear} on:click={clear} disabled={!value} >C</button>
 </div>
 
 <style>
