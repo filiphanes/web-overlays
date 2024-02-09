@@ -133,7 +133,7 @@ function updatedVerseIndex(newVerseIndex) {
 
 GUN_SUPER_PEERS = GUN_SUPER_PEERS || ['http://127.0.0.1/gun'];
 let gun = Gun(GUN_SUPER_PEERS);
-let overlay = gun.get('songs').get(window.location.hash || 'demo');
+let overlay = gun.get('songs').get(window.location.hash.slice(1) || 'demo');
 
 overlay.get('playlist').map().on(function(song, key) {
 	console.log('new playlist song', key, song);

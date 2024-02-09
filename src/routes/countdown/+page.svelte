@@ -27,7 +27,7 @@
 	let configBar = {style:{}};
 
 	onMount(() => {
-    const params = new URLSearchParams((window.location.hash || "").slice(1));
+    const params = new URLSearchParams((window.location.hash.slice(1) || ""));
     params.forEach((value, key) => {
       if (config[key] !== undefined) {
         config[key] = value;

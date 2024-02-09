@@ -41,7 +41,7 @@
         'https://gun.filiphanes.sk/gun',
     ])
 
-    overlay = gun.get('bible').get($page.url.hash || 'demo');
+    overlay = gun.get('bible').get($page.url.hash.slice(1) || 'demo');
     /* Synced variables */
     shown   = wrapStore(overlay.get('show'), shown);
     line1   = wrapStore(overlay.get('line1'), line1);
@@ -316,13 +316,15 @@ input:disabled {
 }
 
 button {
-  background-color: #d2d2d2;
+  color: whitesmoke;
+  background-color: #555;
+  font-size: 1rem;
   outline: none;
-  margin: 0 0 .25rem 0;
-  line-height: 1rem;
-  width: 2.8rem;
-  background: #555;
-  border: 0;
+  margin: 0;
+  line-height: 2rem;
+  width: 3rem;
+  border: 1px solid black;
+  border-radius: .5rem;
 }
 
 button:active {
@@ -343,7 +345,7 @@ button:focus {
 .address-filter {
   display: block;
   width: 49%;
-  margin: 0 1% 1remp 0;
+  margin: 0 1% 1rem 0;
   padding: 0;
   height: 10rem;
   overflow: scroll;
