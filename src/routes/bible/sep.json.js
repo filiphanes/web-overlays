@@ -96,28 +96,28 @@ export const index = {
     {
       "abbreviation": "1krl",
       "abb_by_translation": "1Kr",
-      "name": "1. kráľov",
+      "name": "1. Kráľov",
       "testament": "old",
       "category": "hist"
     },
     {
       "abbreviation": "2krl",
       "abb_by_translation": "2Kr",
-      "name": "2. kráľov",
+      "name": "2. Kráľov",
       "testament": "old",
       "category": "hist"
     },
     {
       "abbreviation": "1krn",
       "abb_by_translation": "1Kron",
-      "name": "1. kronická",
+      "name": "1. Kronická",
       "testament": "old",
       "category": "hist"
     },
     {
       "abbreviation": "2krn",
       "abb_by_translation": "2Kron",
-      "name": "2. kronická",
+      "name": "2. Kronická",
       "testament": "old",
       "category": "hist"
     },
