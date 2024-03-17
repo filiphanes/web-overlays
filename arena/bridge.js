@@ -2,7 +2,23 @@ import Gun from "gun";
 import fetch from 'node-fetch';
 import { config } from './config.js';
 
-async function put_clip(id, data) {
+async function connectClip(id) {
+    if (!id) return;
+    try {
+        const response = await fetch(`${config.arena_url}/api/v1/composition/clips/by-id/${id}/connect`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(true),
+        });
+        if (!response.ok) {
+            console.error("Arena: POST failed", await response.text());
+        }
+    } catch (error) {
+        console.error("connect clip error", error);
+    }
+}
+
+async function putClip(id, data) {
     if (!id) return;
     try {
         const response = await fetch(`${config.arena_url}/api/v1/composition/clips/by-id/${id}`, {
@@ -14,19 +30,19 @@ async function put_clip(id, data) {
             console.error("Arena: PUT failed", await response.text());
         }
     } catch (error) {
-        console.error("put clip error", error.code);
+        console.error("put clip error", error);
     }
 }
 
-async function set_clip_text(id, text) {
-    await put_clip(id, { "video": { "sourceparams": { "Text": text } } })
+async function setClipText(id, text) {
+    await putClip(id, {"video": {"sourceparams": {"Text": text}}})
 }
 
-async function set_video_opacity(id, value) {
-    await put_clip(id, { "video": { "opacity": value } })
+async function setvideoOpacity(id, value) {
+    await putClip(id, {"video": {"opacity": value}})
 }
 
-async function find_clips() {
+async function findClips() {
     try {
         var response = await fetch(`${config.arena_url}/api/v1/composition`)
     } catch (error) {
@@ -36,32 +52,45 @@ async function find_clips() {
     const data = await response.json();
     data.layers.forEach((layer) => {
         layer.clips.forEach((clip) => {
-            if      (clip.name.value.includes("#line1")) clip_ids.line1 = clip.id;
-            else if (clip.name.value.includes("#line2")) clip_ids.line2 = clip.id;
+            [...clip.name.value.matchAll(/#gab-([\w\d]+)-([ab])/g)].forEach((match) => {
+                if      (match[2] == 'a') clipsA[match[1]] = clip.id;
+                else if (match[2] == 'b') clipsB[match[1]] = clip.id;
+            })
         })
     })
-    console.log("clip_ids", clip_ids)
+    console.log("AB", clipsA, clipsB)
 }
 
-let clip_ids = {
-    line1: 0,
-    line2: 0,
+async function updateState(data, key) {
+    if (state[key] != data) {
+        state[key] = data;
+        console.log(key, '=', data);
+        if (!timeout) timeout = setTimeout(connectNextClip, 50);
+    }
 }
+
+async function connectNextClip() {
+    timeout = null;
+    await setClipText(nextClips.line1, state.line1);
+    await setClipText(nextClips.line2, state.line2);
+    await setvideoOpacity(nextClips.line1, +state.show);
+    await setvideoOpacity(nextClips.line2, +state.show);
+    await connectClip(nextClips.line1)
+    await connectClip(nextClips.line2)
+    if (nextClips == clipsA) nextClips = clipsB;
+    else nextClips = clipsA;
+}
+
 let gun = Gun(config.gun_peers);
 let overlay = gun.get('bible').get(config.namespace || demo);
-await find_clips();
-setInterval(find_clips, 10101);
+let clipsA = {};
+let clipsB = {};
+let nextClips = clipsA;
+const state = {};
+let timeout = null;
 
-overlay.get('line1').on(function(data, key){
-    set_clip_text(clip_ids.line1, data.trim());
-    console.log(key, data);
-});
-overlay.get('line2').on(function(data, key){
-    set_clip_text(clip_ids.line2, data.trim());
-    console.log(key, data);
-});
-overlay.get('show').on(function(data, key){
-    set_video_opacity(clip_ids.line1, +data);
-    set_video_opacity(clip_ids.line2, +data);
-    console.log(key, data);
-});
+await findClips();
+setInterval(findClips, 10101);
+overlay.get('line1').on(updateState);
+overlay.get('line2').on(updateState);
+overlay.get('show').on(updateState);
