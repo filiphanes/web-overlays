@@ -15,14 +15,16 @@
   let loadingBible = false;
   let loadingBook = false;
 
-  let defaultAddress = { book: "gn", chapter: 1, verse: 1, verseCount: 1 };
-  let books = [];
-  let booksByAbbr = new Map();
+  let defaultAddress = { bible: "roh", book: "gn", chapter: 1, verse: 1, verseCount: 1 };
+  let bookList = [];
+  let books1 = new Map();
+  let books2 = new Map();
 
   let bookFilter = "";
   let shownBook;
   let lastAddresses = [defaultAddress,];
   let address = {...defaultAddress};
+  let address2 = {...defaultAddress};
 
   let overlay;
 
@@ -30,12 +32,15 @@
   let shown   = writable(false);
   let line1   = writable('line1');
   let line2   = writable('line2');
+  let line3   = writable('line3');
+  let line4   = writable('line4');
   let book    = writable(defaultAddress.book);
   let chapter = writable(defaultAddress.chapter);
   let verse   = writable(defaultAddress.verse);
   let verseCount = writable(defaultAddress.verseCount);
   let theme   = writable('');
   let bibleid = writable('roh');
+  let bibleid2 = writable('');
 
 	onMount(() => {
     const gun = Gun([
@@ -47,22 +52,29 @@
     shown   = wrapStore(overlay.get('show'), shown);
     line1   = wrapStore(overlay.get('line1'), line1);
     line2   = wrapStore(overlay.get('line2'), line2);
+    line3   = wrapStore(overlay.get('line3'), line3);
+    line4   = wrapStore(overlay.get('line4'), line4);
     book    = wrapStore(overlay.get('book'), book);
     chapter = wrapStore(overlay.get('chapter'), chapter);
     verse   = wrapStore(overlay.get('verse'), verse);
     verseCount = wrapStore(overlay.get('verseCount'), verseCount);
     theme   = wrapStore(overlay.get('theme'), theme);
     bibleid = wrapStore(overlay.get('bibleid'), bibleid);
+    bibleid2 = wrapStore(overlay.get('bibleid2'), bibleid2);
 
     return () => {};
   })
 
   $: address = {bible: $bibleid, book: $book, chapter: $chapter, verse: $verse, verseCount: $verseCount};
-  $: $line1 = addressAsString(address);
-  $: $line2 = addressContent(address);
-  $: loadBible($bibleid || 'roh');
-  $: shownBook = booksByAbbr[$book] || { chapters: {}, name: "" };
-  $: filteredBooks = bookFilter ? books.filter(matchesBook) : books;
+  $: address2 = {bible: $bibleid2, book: $book, chapter: $chapter, verse: $verse, verseCount: $verseCount};
+  $: $line1 = addressAsString(address, books1);
+  $: $line2 = addressContent(address, books1);
+  $: $line3 = addressAsString(address2, books2);
+  $: $line4 = addressContent(address2, books2);
+  $: loadBible($bibleid || 'roh', books1, true);
+  $: loadBible($bibleid2, books2, false);
+  $: shownBook = books1[$book] || {chapters: {}};
+  $: filteredBooks = bookFilter ? bookList.filter(matchesBook) : bookList;
   $: chapterLength = ((shownBook.chapters||{})[$chapter]||[]).length;
   $: bookLength = Object.keys(shownBook.chapters||{}).length;
 
@@ -72,26 +84,37 @@
     : lastAddresses;
   */
 
-  function loadBible(bibleid) {
-    books = bibles[bibleid].books || [];
-    for (let i=0; i<books.length; i++) {
-      books[i].index = i;
-      booksByAbbr[books[i].abbreviation] = books[i];
+  function loadBible(bibleid, books, updateBookList) {
+    if (!bibleid) {
+      books.clear();
+      return;
     }
-    /* Redraw */
-    books = books;
+    bibles[bibleid].books.forEach(function(book) {
+      books[book.abbreviation] = book;
+    })
+    if (updateBookList) {
+      bookList = bibles[bibleid].books;
+      for (let i=0; i<bookList.length; i++) {
+        bookList[i].index = i;
+      }
+      /* Redraw */
+      bookList = bookList;
+    }
   }
 
-  function loadBook(abbreviation) {
+  function loadBook(bibleid, abbreviation, books) {
+    if (!bibleid) return;
     loadingBook = true;
-    console.log('Loading book', abbreviation)
-    fetch('/bible/' + ($bibleid || 'roh') + '/' + abbreviation + '.json')
+    // console.log('Loading book', bibleid, abbreviation)
+    fetch('/bible/' + (bibleid || 'roh') + '/' + abbreviation + '.json')
     .then(response => response.json())
     .then(data => {
-      booksByAbbr[abbreviation].chapters = data;
+      books[abbreviation].chapters = data;
       /* Redraw */
       address = address;
       loadingBook = false;
+      $book = $book;
+      // console.log('loadedBook', bibleid, abbreviation);
     })
   }
 
@@ -116,10 +139,10 @@
     lastAddresses = lastAddresses.filter((h, i) => i === 0 || !equalAddresses(h, address));
   }
 
-  function addressAsString(address) {
+  function addressAsString(address, books) {
     if (address === undefined) return '';
-    if (!booksByAbbr[address.book]) return '';
-    var s = booksByAbbr[address.book].name + ' ' + address.chapter;
+    if (!books[address.book]) return '';
+    var s = books[address.book].name + ' ' + address.chapter;
     if (address.verse) {
       s += ',' + address.verse;
       if (address.verseCount > 1) {
@@ -129,13 +152,14 @@
     return s;
   }
 
-  function addressContent(address) {
+  function addressContent(address, books) {
     if (address === undefined) return '';
     var content = '';
-    var book = booksByAbbr[address.book];
+    var book = books[address.book];
+    // console.log('addressContent', bibleid, address, books);
     if (book) {
       if (!book.chapters) {
-        loadBook(address.book);
+        loadBook(address.bible, address.book, books);
         return content;
       }
       if (address.verse && book.chapters[address.chapter]) {
@@ -184,7 +208,7 @@
     $verse = +$verse - 1;
     if ($verse <= 0) {
       decrementChapter();
-      chapterLength = booksByAbbr[$book].chapters[$chapter].length;
+      chapterLength = books1[$book].chapters[$chapter].length;
       $verse = chapterLength;
     }
   };
@@ -201,7 +225,7 @@
     $chapter = +$chapter - 1;
     if ($chapter <= 0) {
       decrementBook();
-      $chapter = Object.keys(booksByAbbr[$book].chapters||{}).length;
+      $chapter = Object.keys(books1[$book].chapters||{}).length;
     }
   };
 
@@ -215,14 +239,14 @@
   };
 
   function decrementBook() {
-    const newIndex = booksByAbbr[$book].index - 1 + books.length;
-    $book = books[newIndex%books.length].abbreviation;
+    const newIndex = books1[$book].index - 1 + bookList.length;
+    $book = bookList[newIndex%bookList.length].abbreviation;
     console.log('newIndex', newIndex, $book);
   };
 
   function incrementBook() {
-    const newIndex = booksByAbbr[$book].index + 1;
-    $book = books[newIndex%books.length].abbreviation;
+    const newIndex = books1[$book].index + 1;
+    $book = bookList[newIndex%bookList.length].abbreviation;
   };
 </script>
 
@@ -238,7 +262,7 @@
 <div class="address-filter">
   {#each lastAddresses as addr, i}
   <div class="address-item btn-group">
-    <button class="address-set btn" class:btn-primary={equalAddresses(addr, address)} on:click={addressSelector(addr)}>{addressAsString(addr) || (addr.book+' '+addr.chapter+','+addr.verse)}</button>
+    <button class="address-set btn" class:btn-primary={equalAddresses(addr, address)} on:click={addressSelector(addr)}>{addressAsString(addr, books1) || (addr.book+' '+addr.chapter+','+addr.verse)}</button>
     <button class="btn btn-secondary address-remove" on:click={removeLastAddress(i)}>×</button>
   </div>
   {/each}
@@ -247,32 +271,35 @@
 <div style="display: inline-block; margin: .5rem; vertical-align: top;">
   Kapitola: {$chapter} z {bookLength}
   <NumberPad bind:value={$chapter} max={bookLength} />
-  <button class="btn btn-primary" on:click={decrementChapter} style="line-height: 2rem;">-1</button>
-  <button class="btn btn-primary" on:click={incrementChapter} style="line-height: 2rem;">+1</button>
-  <br />
-  <button class="control-button btn" style="line-height: 2rem;" on:click={toggleLine} class:btn-danger={$shown} class:btn-success={!$shown}>
-    {#if $shown}Skryť{:else}Zobraziť{/if}
-  </button>
+  <button class="btn btn-primary" on:click={decrementChapter} style="line-height: 2rem;"
+  >-1</button><button class="btn btn-primary" on:click={incrementChapter} style="line-height: 2rem;"
+  >+1</button><br/><button class="control-button btn" style="line-height: 2rem;" on:click={toggleLine} class:btn-danger={$shown} class:btn-success={!$shown}
+  >{#if $shown}Skryť{:else}Zobraziť{/if}</button>
 </div>
 <div style="display: inline-block; margin: .5rem; vertical-align: top;">
   Verš: {$verse} {#if $verseCount>1} - {$verse + $verseCount - 1}{/if} z {chapterLength}
   <NumberPad bind:value={$verse} max={chapterLength} />
-  <button class="btn btn-primary" on:click={decrementVerse} style="line-height: 2rem;">-1</button>
-  <button class="btn btn-primary" on:click={incrementVerse} style="line-height: 2rem;">+1</button>
-  <br />
-  <button disabled style="background: transparent;"></button>
-  <button class="btn btn-primary" on:click={function(){$verseCount -=1 }} style="line-height: 2rem;" disabled={$verseCount<=1}>-1</button>
-  <button class="btn btn-primary" on:click={function(){$verseCount +=1 }} style="line-height: 2rem;" disabled={$verseCount>chapterLength}>+1</button>
-  <br />
-  <button disabled style="background: transparent;"></button>
-  <button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$verse=Math.max(1,$verse-$verseCount)}} disabled={$verse <=1 }>⇐</button>
-  <button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$verse=Math.min($verse+$verseCount,chapterLength)}} disabled={$verse+$verseCount> chapterLength}>⇒</button>
+  <button class="btn btn-primary" on:click={decrementVerse} style="line-height: 2rem;"
+  >-1</button><button class="btn btn-primary" on:click={incrementVerse} style="line-height: 2rem;"
+  >+1</button><br/><button disabled style="background: transparent;"
+  ></button><button class="btn btn-primary" on:click={function(){$verseCount -=1 }} style="line-height: 2rem;" disabled={$verseCount<=1}
+  >-1</button><button class="btn btn-primary" on:click={function(){$verseCount +=1 }} style="line-height: 2rem;" disabled={$verseCount>chapterLength}
+  >+1</button><br/><button disabled style="background: transparent;"
+  ></button><button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$verse=Math.max(1,$verse-$verseCount)}} disabled={$verse <=1 }
+  >⇐</button><button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$verse=Math.min($verse+$verseCount,chapterLength)}} disabled={$verse+$verseCount> chapterLength}
+  >⇒</button>
 </div>
 
 <div class="preview">
   {$line1}<br/>
   {@html $line2}
 </div>
+{#if $bibleid2}
+<div class="preview">
+  {$line3}<br/>
+  {@html $line4}
+</div>
+{/if}
 
 <br />
 <div class="settings">
@@ -285,14 +312,27 @@
       <option value="ssv">Katolícky</option>
       <option value="bot">Botekov</option>
       <option value="kjv">King James</option>
-    </select> {#if loadingBible}Nahráva sa preklad {$bibleid}.{/if}
+    </select>
+  </div>
+  <div class="bible">
+    Preklad 2:
+    <select bind:value={$bibleid2}>
+      <option value="">Žiadny</option>
+      <option value="roh">Roháčkov</option>
+      <option value="seb">Ekumenický</option>
+      <option value="sep">Evanjelický</option>
+      <option value="ssv">Katolícky</option>
+      <option value="bot">Botekov</option>
+      <option value="kjv">King James</option>
+    </select>
+    {#if loadingBible}Nahráva sa preklad {$bibleid}.{/if}
   </div>
 
   <div class="theme">
     Téma:
     <select bind:value={$theme}>
-      <option value="" selected>Predvolené</option>
-      <option value="simple-with-shadow" selected>Jednoduché s tieňom</option>
+      <option value="" selected>Predvolená</option>
+      <option value="simple-with-shadow" selected>Jednoduch* s tieňom</option>
       <option value="fullscreen-white-bg">Fullscreen biele pozadie</option>
     </select>
   </div>

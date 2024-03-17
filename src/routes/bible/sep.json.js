@@ -6,10 +6,8 @@ export const index = {
   "books": [
     {
       "abbreviation": "gn",
-      "abb_by_translation": "1M",
+      "abb": "1M",
       "name": "1. Mojžišova",
-      "testament": "old",
-      "category": "pent",
       "aliases": [
         "Genesis",
         "Genezis"
@@ -17,515 +15,385 @@ export const index = {
     },
     {
       "abbreviation": "ex",
-      "abb_by_translation": "2M",
+      "abb": "2M",
       "name": "2. Mojžišova",
-      "testament": "old",
-      "category": "pent",
       "aliases": [
         "Exodus"
       ]
     },
     {
       "abbreviation": "lv",
-      "abb_by_translation": "3M",
+      "abb": "3M",
       "name": "3. Mojžišova",
-      "testament": "old",
-      "category": "pent",
       "aliases": [
         "Levitikus"
       ]
     },
     {
       "abbreviation": "nm",
-      "abb_by_translation": "4M",
+      "abb": "4M",
       "name": "4. Mojžišova",
-      "testament": "old",
-      "category": "pent",
       "aliases": [
         "Numeri"
       ]
     },
     {
       "abbreviation": "dt",
-      "abb_by_translation": "5M",
+      "abb": "5M",
       "name": "5. Mojžišova",
-      "testament": "old",
-      "category": "pent",
       "aliases": [
         "Deuteronómium"
       ]
     },
     {
       "abbreviation": "joz",
-      "abb_by_translation": "Joz",
+      "abb": "Joz",
       "name": "Józua",
-      "testament": "old",
-      "category": "hist",
       "aliases": [
         "Jozue"
       ]
     },
     {
       "abbreviation": "sdc",
-      "abb_by_translation": "Sud",
+      "abb": "Sud",
       "name": "Sudcovia",
-      "testament": "old",
-      "category": "hist"
     },
     {
       "abbreviation": "rut",
-      "abb_by_translation": "Rut",
+      "abb": "Rut",
       "name": "Rút",
-      "testament": "old",
-      "category": "hist"
     },
     {
       "abbreviation": "1sam",
-      "abb_by_translation": "1S",
+      "abb": "1S",
       "name": "1. Samuelova",
-      "testament": "old",
-      "category": "hist"
     },
     {
       "abbreviation": "2sam",
-      "abb_by_translation": "2S",
+      "abb": "2S",
       "name": "2. Samuelova",
-      "testament": "old",
-      "category": "hist"
     },
     {
       "abbreviation": "1krl",
-      "abb_by_translation": "1Kr",
+      "abb": "1Kr",
       "name": "1. Kráľov",
-      "testament": "old",
-      "category": "hist"
     },
     {
       "abbreviation": "2krl",
-      "abb_by_translation": "2Kr",
+      "abb": "2Kr",
       "name": "2. Kráľov",
-      "testament": "old",
-      "category": "hist"
     },
     {
       "abbreviation": "1krn",
-      "abb_by_translation": "1Kron",
+      "abb": "1Kron",
       "name": "1. Kronická",
-      "testament": "old",
-      "category": "hist"
     },
     {
       "abbreviation": "2krn",
-      "abb_by_translation": "2Kron",
+      "abb": "2Kron",
       "name": "2. Kronická",
-      "testament": "old",
-      "category": "hist"
     },
     {
       "abbreviation": "ezd",
-      "abb_by_translation": "Ezd",
+      "abb": "Ezd",
       "name": "Ezdráš",
-      "testament": "old",
-      "category": "hist"
     },
     {
       "abbreviation": "neh",
-      "abb_by_translation": "Neh",
+      "abb": "Neh",
       "name": "Nehemiáš",
-      "testament": "old",
-      "category": "hist"
     },
     {
       "abbreviation": "est",
-      "abb_by_translation": "Est",
+      "abb": "Est",
       "name": "Ester",
-      "testament": "old",
-      "category": "hist"
     },
     {
       "abbreviation": "job",
-      "abb_by_translation": "Job",
+      "abb": "Job",
       "name": "Jób",
-      "testament": "old",
-      "category": "pouc"
     },
     {
       "abbreviation": "z",
-      "abb_by_translation": "Ž",
+      "abb": "Ž",
       "name": "Žalmy",
-      "testament": "old",
-      "category": "pouc",
       "aliases": [
         "Žalmy"
       ]
     },
     {
       "abbreviation": "pris",
-      "abb_by_translation": "Pr",
+      "abb": "Pr",
       "name": "Príslovia",
-      "testament": "old",
-      "category": "pouc"
     },
     {
       "abbreviation": "koh",
-      "abb_by_translation": "Kaz",
+      "abb": "Kaz",
       "name": "Kazateľ",
-      "testament": "old",
-      "category": "pouc",
       "aliases": [
         "Kohelet"
       ]
     },
     {
       "abbreviation": "vlp",
-      "abb_by_translation": "Veľp",
+      "abb": "Veľp",
       "name": "Veľpieseň",
-      "testament": "old",
-      "category": "pouc",
       "aliases": [
         "Pieseň Šalamúnova"
       ]
     },
     {
       "abbreviation": "iz",
-      "abb_by_translation": "Iz",
+      "abb": "Iz",
       "name": "Izaiáš",
-      "testament": "old",
-      "category": "pror"
     },
     {
       "abbreviation": "jer",
-      "abb_by_translation": "Jer",
+      "abb": "Jer",
       "name": "Jeremiáš",
-      "testament": "old",
-      "category": "pror"
     },
     {
       "abbreviation": "nar",
-      "abb_by_translation": "Žalosp",
+      "abb": "Žalosp",
       "name": "Žalospevy",
-      "testament": "old",
-      "category": "pror",
       "aliases": [
         "Plač Jeremiášov"
       ]
     },
     {
       "abbreviation": "ez",
-      "abb_by_translation": "Ez",
+      "abb": "Ez",
       "name": "Ezechiel",
-      "testament": "old",
-      "category": "pror"
     },
     {
       "abbreviation": "dan",
-      "abb_by_translation": "Dan",
+      "abb": "Dan",
       "name": "Daniel",
-      "testament": "old",
-      "category": "pror"
     },
     {
       "abbreviation": "oz",
-      "abb_by_translation": "Oz",
+      "abb": "Oz",
       "name": "Ozeáš",
-      "testament": "old",
-      "category": "pror"
     },
     {
       "abbreviation": "joel",
-      "abb_by_translation": "Joel",
+      "abb": "Joel",
       "name": "Joel",
-      "testament": "old",
-      "category": "pror"
     },
     {
       "abbreviation": "am",
-      "abb_by_translation": "Am",
+      "abb": "Am",
       "name": "Ámos",
-      "testament": "old",
-      "category": "pror"
     },
     {
       "abbreviation": "abd",
-      "abb_by_translation": "Abd",
+      "abb": "Abd",
       "name": "Abdiáš",
-      "testament": "old",
-      "category": "pror"
     },
     {
       "abbreviation": "jon",
-      "abb_by_translation": "Jon",
+      "abb": "Jon",
       "name": "Jonáš",
-      "testament": "old",
-      "category": "pror"
     },
     {
       "abbreviation": "mich",
-      "abb_by_translation": "Mich",
+      "abb": "Mich",
       "name": "Micheáš",
-      "testament": "old",
-      "category": "pror"
     },
     {
       "abbreviation": "nah",
-      "abb_by_translation": "Nah",
+      "abb": "Nah",
       "name": "Nahum",
-      "testament": "old",
-      "category": "pror"
     },
     {
       "abbreviation": "hab",
-      "abb_by_translation": "Ab",
+      "abb": "Ab",
       "name": "Abakuk",
-      "testament": "old",
-      "category": "pror"
     },
     {
       "abbreviation": "sof",
-      "abb_by_translation": "Sof",
+      "abb": "Sof",
       "name": "Sofoniáš",
-      "testament": "old",
-      "category": "pror"
     },
     {
       "abbreviation": "ag",
-      "abb_by_translation": "Ag",
+      "abb": "Ag",
       "name": "Aggeus",
-      "testament": "old",
-      "category": "pror",
       "aliases": [
         "Haggeus"
       ]
     },
     {
       "abbreviation": "zach",
-      "abb_by_translation": "Zach",
+      "abb": "Zach",
       "name": "Zachariáš",
-      "testament": "old",
-      "category": "pror"
     },
     {
       "abbreviation": "mal",
-      "abb_by_translation": "Mal",
+      "abb": "Mal",
       "name": "Malachiáš",
-      "testament": "old",
-      "category": "pror"
     },
     {
       "abbreviation": "mt",
-      "abb_by_translation": "Mt",
+      "abb": "Mt",
       "name": "Matúš",
-      "testament": "new",
-      "category": "evan",
       "aliases": [
         "Evanjelium podľa Matúša"
       ]
     },
     {
       "abbreviation": "mk",
-      "abb_by_translation": "Mk",
+      "abb": "Mk",
       "name": "Mark",
-      "testament": "new",
-      "category": "evan",
       "aliases": [
         "Evanjelium podľa Mareka"
       ]
     },
     {
       "abbreviation": "lk",
-      "abb_by_translation": "L",
+      "abb": "L",
       "name": "Lukáš",
-      "testament": "new",
-      "category": "evan",
       "aliases": [
         "Evanjelium podľa Lukáša"
       ]
     },
     {
       "abbreviation": "jn",
-      "abb_by_translation": "J",
+      "abb": "J",
       "name": "Ján",
-      "testament": "new",
-      "category": "evan",
       "aliases": [
         "Evanjelium podľa Jána"
       ]
     },
     {
       "abbreviation": "sk",
-      "abb_by_translation": "Sk",
+      "abb": "Sk",
       "name": "Skutky",
-      "testament": "new",
-      "category": "hist",
       "aliases": [
         "Skutky apoštolov"
       ]
     },
     {
       "abbreviation": "rim",
-      "abb_by_translation": "R",
+      "abb": "R",
       "name": "Rímskym",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "1kor",
-      "abb_by_translation": "1K",
+      "abb": "1K",
       "name": "1. Korintským",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "2kor",
-      "abb_by_translation": "2K",
+      "abb": "2K",
       "name": "2. Korintským",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "ga",
-      "abb_by_translation": "G",
+      "abb": "G",
       "name": "Galatským",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "ef",
-      "abb_by_translation": "Ef",
+      "abb": "Ef",
       "name": "Efezským",
-      "testament": "new",
-      "category": "list",
       "aliases": [
         "Efezským"
       ]
     },
     {
       "abbreviation": "flp",
-      "abb_by_translation": "F",
+      "abb": "F",
       "name": "Filipským",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "kol",
-      "abb_by_translation": "Kol",
+      "abb": "Kol",
       "name": "Kolosenským",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "1tes",
-      "abb_by_translation": "1Tes",
+      "abb": "1Tes",
       "name": "1. Tesalonickým",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "2tes",
-      "abb_by_translation": "2Tes",
+      "abb": "2Tes",
       "name": "2. Tesalonickým",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "1tim",
-      "abb_by_translation": "1Tim",
+      "abb": "1Tim",
       "name": "1. Timoteovi",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "2tim",
-      "abb_by_translation": "2Tim",
+      "abb": "2Tim",
       "name": "2. Timoteovi",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "tit",
-      "abb_by_translation": "Tit",
+      "abb": "Tit",
       "name": "Títovi",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "flm",
-      "abb_by_translation": "Filem",
+      "abb": "Filem",
       "name": "Filemonovi",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "heb",
-      "abb_by_translation": "Žid",
+      "abb": "Žid",
       "name": "Židom",
-      "testament": "new",
-      "category": "list",
       "aliases": [
         "Židom"
       ]
     },
     {
       "abbreviation": "jk",
-      "abb_by_translation": "Jk",
+      "abb": "Jk",
       "name": "Jakub",
-      "testament": "new",
-      "category": "list",
       "aliases": [
         "Jakubov list"
       ]
     },
     {
       "abbreviation": "1pt",
-      "abb_by_translation": "1Pt",
+      "abb": "1Pt",
       "name": "1. Petrov",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "2pt",
-      "abb_by_translation": "2Pt",
+      "abb": "2Pt",
       "name": "2. Petrov",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "1jn",
-      "abb_by_translation": "1J",
+      "abb": "1J",
       "name": "1. Jánov",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "2jn",
-      "abb_by_translation": "2J",
+      "abb": "2J",
       "name": "2. Jánov",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "3jn",
-      "abb_by_translation": "3J",
+      "abb": "3J",
       "name": "3. Jánov",
-      "testament": "new",
-      "category": "list"
     },
     {
       "abbreviation": "jud",
-      "abb_by_translation": "Jud",
+      "abb": "Jud",
       "name": "Júdov",
-      "testament": "new",
-      "category": "list",
       "aliases": [
         "Júdov list"
       ]
     },
     {
       "abbreviation": "zj",
-      "abb_by_translation": "Zjav",
+      "abb": "Zjav",
       "name": "Zjavenie Jána",
-      "testament": "new",
-      "category": "pror",
       "aliases": [
         "Zjavenie Jána"
       ]
