@@ -9,8 +9,9 @@
   import {index as sep} from "./sep.json.js"
   import {index as ssv} from "./ssv.json.js"
   import {index as bot} from "./bot.json.js"
+  import {index as kjv} from "./kjv.json.js"
 
-  let bibles = {roh, seb, sep, ssv, bot};
+  let bibles = {roh, seb, sep, ssv, bot, kjv};
   let loadingBible = false;
   let loadingBook = false;
 
@@ -283,6 +284,7 @@
       <option value="sep">Evanjelický</option>
       <option value="ssv">Katolícky</option>
       <option value="bot">Botekov</option>
+      <option value="kjv">King James</option>
     </select> {#if loadingBible}Nahráva sa preklad {$bibleid}.{/if}
   </div>
 
@@ -358,7 +360,7 @@ button:focus {
 .address-remove {
   width: 100%;
   margin: 0 0 .1rem;
-  padding: .5rem;
+  padding: .3rem;
   text-align: left;
   color: whitesmoke;
   border-radius: 0;
