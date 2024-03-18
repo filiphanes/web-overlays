@@ -41,6 +41,7 @@
   let theme   = writable('');
   let bibleid = writable('roh');
   let bibleid2 = writable('');
+  let allinone = writable('{}');
 
 	onMount(() => {
     const gun = Gun([
@@ -61,6 +62,7 @@
     theme   = wrapStore(overlay.get('theme'), theme);
     bibleid = wrapStore(overlay.get('bibleid'), bibleid);
     bibleid2 = wrapStore(overlay.get('bibleid2'), bibleid2);
+    allinone = wrapStore(overlay.get('vsetkospolu'), allinone);
 
     return () => {};
   })
@@ -71,6 +73,7 @@
   $: $line2 = addressContent(address, books1);
   $: $line3 = addressAsString(address2, books2);
   $: $line4 = addressContent(address2, books2);
+  $: $allinone = JSON.stringify({shown:$shown, line1:$line1, line2:$line2, line3:$line3, line4:$line4})
   $: loadBible($bibleid || 'roh', books1, true);
   $: loadBible($bibleid2, books2, false);
   $: shownBook = books1[$book] || {chapters: {}};
