@@ -62,7 +62,7 @@
     theme   = wrapStore(overlay.get('theme'), theme);
     bibleid = wrapStore(overlay.get('bibleid'), bibleid);
     bibleid2 = wrapStore(overlay.get('bibleid2'), bibleid2);
-    allinone = wrapStore(overlay.get('allineone'), allinone);
+    allinone = wrapStore(overlay.get('allinone'), allinone);
 
     return () => {};
   })
