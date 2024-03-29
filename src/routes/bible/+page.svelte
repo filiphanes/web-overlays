@@ -12,7 +12,6 @@
   import {index as kjv} from "./kjv.json.js"
 
   let bibles = {roh, seb, sep, ssv, bot, kjv};
-  let loadingBible = false;
   let loadingBook = false;
 
   let defaultAddress = { bible: "roh", book: "gn", chapter: 1, verse: 1, verseCount: 1 };
@@ -275,22 +274,20 @@
   Kapitola: {$chapter} z {bookLength}
   <NumberPad bind:value={$chapter} max={bookLength} />
   <button class="btn btn-primary" on:click={decrementChapter} style="line-height: 2rem;"
-  >-1</button><button class="btn btn-primary" on:click={incrementChapter} style="line-height: 2rem;"
-  >+1</button><br/><button class="control-button btn" style="line-height: 2rem;" on:click={toggleLine} class:btn-danger={$shown} class:btn-success={!$shown}
+  >⇦</button><button class="btn btn-primary" on:click={incrementChapter} style="line-height: 2rem;"
+  >⇨</button><br/><button class="control-button btn" style="line-height: 2rem;" on:click={toggleLine} class:btn-danger={$shown} class:btn-success={!$shown}
   >{#if $shown}Skryť{:else}Zobraziť{/if}</button>
 </div>
 <div style="display: inline-block; margin: .5rem; vertical-align: top;">
   Verš: {$verse} {#if $verseCount>1} - {$verse + $verseCount - 1}{/if} z {chapterLength}
   <NumberPad bind:value={$verse} max={chapterLength} />
-  <button class="btn btn-primary" on:click={decrementVerse} style="line-height: 2rem;"
-  >-1</button><button class="btn btn-primary" on:click={incrementVerse} style="line-height: 2rem;"
-  >+1</button><br/><button disabled style="background: transparent;"
+  <button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$verse=Math.max(1,$verse-$verseCount)}} disabled={$verse <=1 }
+  >⇦</button><button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$verse=Math.min($verse+$verseCount,chapterLength)}} disabled={$verse+$verseCount> chapterLength}
+  >⇨</button><br/><button disabled style="background: transparent;"
   ></button><button class="btn btn-primary" on:click={function(){$verseCount -=1 }} style="line-height: 2rem;" disabled={$verseCount<=1}
   >-1</button><button class="btn btn-primary" on:click={function(){$verseCount +=1 }} style="line-height: 2rem;" disabled={$verseCount>chapterLength}
   >+1</button><br/><button disabled style="background: transparent;"
-  ></button><button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$verse=Math.max(1,$verse-$verseCount)}} disabled={$verse <=1 }
-  >⇐</button><button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$verse=Math.min($verse+$verseCount,chapterLength)}} disabled={$verse+$verseCount> chapterLength}
-  >⇒</button>
+  ></button>
 </div>
 
 <div class="preview">
@@ -328,14 +325,13 @@
       <option value="bot">Botekov</option>
       <option value="kjv">King James</option>
     </select>
-    {#if loadingBible}Nahráva sa preklad {$bibleid}.{/if}
   </div>
 
   <div class="theme">
     Téma:
     <select bind:value={$theme}>
       <option value="" selected>Predvolená</option>
-      <option value="simple-with-shadow" selected>Jednoduch* s tieňom</option>
+      <option value="simple-with-shadow" selected>Jednoduché s tieňom</option>
       <option value="fullscreen-white-bg">Fullscreen biele pozadie</option>
     </select>
   </div>
@@ -435,6 +431,7 @@ button:focus {
 
 .preview {
   padding: .5rem;
+  user-select: text;
 }
 
 .btn-success {
@@ -449,3 +446,6 @@ button:focus {
   padding: .5rem;
 }
 </style>
+<svelte:head>
+	<title>Biblia ovládač</title>
+</svelte:head>

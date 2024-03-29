@@ -433,15 +433,14 @@ export const index = {
       "abb": "Júd",
       "name": "Júdov list",
       "aliases": [
-        "Júdov list"
       ]
     },
     {
       "abbreviation": "zj",
       "abb": "Zjv",
-      "name": "Zjavenie apoštola Jána - (Apokalypsa)",
+      "name": "Zjavenie Jána",
       "aliases": [
-        "Zjavenie Jána"
+        "Zjavenie apoštola Jána - (Apokalypsa)",
       ]
     }
   ]
