@@ -1,3 +1,6 @@
+<svelte:head>
+	<title>Biblia ovládač</title>
+</svelte:head>
 <script type="javascript">
   import { onMount } from "svelte";
   import NumberPad from "$lib/NumberPad.svelte";
@@ -24,6 +27,13 @@
   let lastAddresses = [defaultAddress,];
   let address = {...defaultAddress};
   let address2 = {...defaultAddress};
+  let addressNext = {...defaultAddress};
+  let address2Next = {...defaultAddress};
+  let showNextVerses = true;
+  let line1Next = '';
+  let line2Next = '';
+  let line3Next = '';
+  let line4Next = '';
 
   let overlay;
 
@@ -37,6 +47,7 @@
   let chapter = writable(defaultAddress.chapter);
   let verse   = writable(defaultAddress.verse);
   let verseCount = writable(defaultAddress.verseCount);
+  let verseNumbers = writable(false);
   let theme   = writable('');
   let bibleid = writable('roh');
   let bibleid2 = writable('');
@@ -58,6 +69,7 @@
     chapter = wrapStore(overlay.get('chapter'), chapter);
     verse   = wrapStore(overlay.get('verse'), verse);
     verseCount = wrapStore(overlay.get('verseCount'), verseCount);
+    verseNumbers = wrapStore(overlay.get('verseNumbers'), verseNumbers);
     theme   = wrapStore(overlay.get('theme'), theme);
     bibleid = wrapStore(overlay.get('bibleid'), bibleid);
     bibleid2 = wrapStore(overlay.get('bibleid2'), bibleid2);
@@ -69,9 +81,15 @@
   $: address = {bible: $bibleid, book: $book, chapter: $chapter, verse: $verse, verseCount: $verseCount};
   $: address2 = {bible: $bibleid2, book: $book, chapter: $chapter, verse: $verse, verseCount: $verseCount};
   $: $line1 = addressAsString(address, books1);
-  $: $line2 = addressContent(address, books1);
+  $: $line2 = addressContent(address, books1, $verseNumbers);
   $: $line3 = addressAsString(address2, books2);
-  $: $line4 = addressContent(address2, books2);
+  $: $line4 = addressContent(address2, books2, $verseNumbers);
+  $: addressNext = incrementVerse({...address});
+  $: address2Next = incrementVerse({...address2});
+  $: line1Next = addressAsString(addressNext, books1);
+  $: line2Next = addressContent(addressNext, books1, $verseNumbers);
+  $: line3Next = addressAsString(address2Next, books2);
+  $: line4Next = addressContent(address2Next, books2, $verseNumbers);
   $: $allinone = JSON.stringify({shown:$shown, line1:$line1, line2:$line2, line3:$line3, line4:$line4})
   $: loadBible($bibleid || 'roh', books1, true);
   $: loadBible($bibleid2, books2, false);
@@ -154,8 +172,8 @@
     return s;
   }
 
-  function addressContent(address, books) {
-    if (address === undefined) return '';
+  function addressContent(address, books, numbers) {
+    if (address === undefined || !address.bible) return '';
     var content = '';
     var book = books[address.book];
     // console.log('addressContent', bibleid, address, books);
@@ -166,7 +184,11 @@
       }
       if (address.verse && book.chapters[address.chapter]) {
         for (var i = address.verse; i < address.verse + address.verseCount; i++) {
-          content += '\n' + (book.chapters[address.chapter][i - 1] || '');
+          content += `\n`;
+          if (numbers) {
+            content += `<sup>${i}</sup>`;
+          }
+          content += book.chapters[address.chapter][i - 1] || '';
         }
       }
     }
@@ -206,49 +228,52 @@
     }
   }
 
-  function decrementVerse() {
-    $verse = +$verse - 1;
-    if ($verse <= 0) {
-      decrementChapter();
-      chapterLength = books1[$book].chapters[$chapter].length;
-      $verse = chapterLength;
+  function decrementVerse(address) {
+    address.verse = +address.verse - address.verseCount;
+    if (address.verse <= 0) {
+      address = decrementChapter(address);
+      chapterLength = books1[address.book].chapters[address.chapter].length;
+      address.verse = chapterLength;
     }
+    return address;
   };
 
-  function incrementVerse() {
-    $verse = +$verse + 1;
-    if ($verse > chapterLength) {
-      incrementChapter();
-      $verse = 1;
+  function incrementVerse(address) {
+    address.verse = +address.verse + address.verseCount;
+    if (address.verse > chapterLength) {
+      address = incrementChapter(address);
     }
+    return address;
   };
 
-  function decrementChapter() {
-    $chapter = +$chapter - 1;
-    if ($chapter <= 0) {
+  function decrementChapter(address) {
+    address.chapter = +address.chapter - 1;
+    if (address.chapter <= 0) {
       decrementBook();
-      $chapter = Object.keys(books1[$book].chapters||{}).length;
+      address.chapter = Object.keys(books1[address.book].chapters||{}).length;
     }
   };
 
   function incrementChapter() {
-    $chapter = +$chapter + 1;
-    if ($chapter > bookLength) {
-      incrementBook();
-      $chapter = 1;
-      $verse = 1;
+    address.chapter = +address.chapter + 1;
+    if (address.chapter > bookLength) {
+      address = incrementBook(address);
+      address.chapter = 1;
+      address.verse = 1;
     }
   };
 
-  function decrementBook() {
-    const newIndex = books1[$book].index - 1 + bookList.length;
-    $book = bookList[newIndex%bookList.length].abbreviation;
+  function decrementBook(address) {
+    const newIndex = books1[address.book].index - 1 + bookList.length;
+    address.book = bookList[newIndex%bookList.length].abbreviation;
     console.log('newIndex', newIndex, $book);
+    return address;
   };
 
-  function incrementBook() {
-    const newIndex = books1[$book].index + 1;
-    $book = bookList[newIndex%bookList.length].abbreviation;
+  function incrementBook(address) {
+    const newIndex = books1[address.book].index + 1;
+    address.book = bookList[newIndex%bookList.length].abbreviation;
+    return address;
   };
 </script>
 
@@ -294,11 +319,22 @@
   {$line1}<br/>
   {@html $line2}
 </div>
+{#if showNextVerses}
+<div class="preview next">
+  {@html line2Next}
+</div>
+{/if}
+
 {#if $bibleid2}
 <div class="preview">
   {$line3}<br/>
   {@html $line4}
 </div>
+{#if showNextVerses}
+<div class="preview next">
+  {@html line4Next}
+</div>
+{/if}
 {/if}
 
 <br />
@@ -314,6 +350,7 @@
       <option value="kjv">King James</option>
     </select>
   </div>
+
   <div class="bible">
     Preklad 2:
     <select bind:value={$bibleid2}>
@@ -335,6 +372,19 @@
       <option value="fullscreen-white-bg">Fullscreen biele pozadie</option>
     </select>
   </div>
+
+  <div class="bible">
+    <label>
+      <input type="checkbox" bind:checked={$verseNumbers} /> Čísla veršov
+    </label>
+  </div>
+
+  <div class="bible">
+    <label>
+      <input type="checkbox" bind:checked={showNextVerses} /> Nasledujúce verše
+    </label>
+  </div>
+
 </div>
 
 <style>
@@ -366,6 +416,7 @@ button {
   width: 3rem;
   border: 1px solid black;
   border-radius: .5rem;
+  user-select: none
 }
 
 button:active {
@@ -433,6 +484,9 @@ button:focus {
   padding: .5rem;
   user-select: text;
 }
+.preview.next {
+  color: #777;
+}
 
 .btn-success {
   background-color: green;
@@ -446,6 +500,3 @@ button:focus {
   padding: .5rem;
 }
 </style>
-<svelte:head>
-	<title>Biblia ovládač</title>
-</svelte:head>

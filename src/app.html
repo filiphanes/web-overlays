@@ -34,8 +34,11 @@ body {
 a {
   color: lightblue;
 }
+main {
+  display: contents;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
 </style>
 %sveltekit.head%
 </head>
-<body><div style="display: contents">%sveltekit.body%</div></body>
-</html>
+<body><main>%sveltekit.body%</main></html>
