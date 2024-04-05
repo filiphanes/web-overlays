@@ -11,7 +11,7 @@ export const index = {
       "aliases": [
         "Genesis",
         "Genezis"
-      ],
+      ]
     },
     {
       "abbreviation": "ex",
@@ -19,7 +19,7 @@ export const index = {
       "name": "2. Mojžišova",
       "aliases": [
         "Exodus"
-      ],
+      ]
     },
     {
       "abbreviation": "lv",
@@ -27,7 +27,7 @@ export const index = {
       "name": "3. Mojžišova",
       "aliases": [
         "Levitikus"
-      ],
+      ]
     },
     {
       "abbreviation": "nm",
@@ -35,7 +35,7 @@ export const index = {
       "name": "4. Mojžišova",
       "aliases": [
         "Numeri"
-      ],
+      ]
     },
     {
       "abbreviation": "dt",
@@ -43,7 +43,7 @@ export const index = {
       "name": "5. Mojžišova",
       "aliases": [
         "Deuteronómium"
-      ],
+      ]
     },
     {
       "abbreviation": "joz",
@@ -51,67 +51,67 @@ export const index = {
       "name": "Jozua",
       "aliases": [
         "Jozue"
-      ],
+      ]
     },
     {
       "abbreviation": "sdc",
       "abb": "Sdc",
-      "name": "Sudcov",
+      "name": "Sudcov"
     },
     {
       "abbreviation": "rut",
       "abb": "Rút",
-      "name": "Rút",
+      "name": "Rút"
     },
     {
       "abbreviation": "1sam",
       "abb": "1Sam",
-      "name": "1. Samuelova",
+      "name": "1. Samuelova"
     },
     {
       "abbreviation": "2sam",
       "abb": "2Sam",
-      "name": "2. Samuelova",
+      "name": "2. Samuelova"
     },
     {
       "abbreviation": "1krl",
       "abb": "1Krľ",
-      "name": "1. Kráľov",
+      "name": "1. Kráľov"
     },
     {
       "abbreviation": "2krl",
       "abb": "2Krľ",
-      "name": "2. Kráľov",
+      "name": "2. Kráľov"
     },
     {
       "abbreviation": "1krn",
       "abb": "1Krn",
-      "name": "1. Kroník",
+      "name": "1. Kroník"
     },
     {
       "abbreviation": "2krn",
       "abb": "2Krn",
-      "name": "2. Kroník",
+      "name": "2. Kroník"
     },
     {
       "abbreviation": "ezd",
       "abb": "Ezd",
-      "name": "Ezdráš",
+      "name": "Ezdráš"
     },
     {
       "abbreviation": "neh",
       "abb": "Neh",
-      "name": "Nehemiáš",
+      "name": "Nehemiáš"
     },
     {
       "abbreviation": "est",
       "abb": "Est",
-      "name": "Ester",
+      "name": "Ester"
     },
     {
       "abbreviation": "job",
       "abb": "Jób",
-      "name": "Jób",
+      "name": "Jób"
     },
     {
       "abbreviation": "z",
@@ -119,12 +119,12 @@ export const index = {
       "name": "Žalm",
       "aliases": [
         "Žalmy"
-      ],
+      ]
     },
     {
       "abbreviation": "pris",
       "abb": "Prís",
-      "name": "Príslovia",
+      "name": "Príslovia"
     },
     {
       "abbreviation": "koh",
@@ -132,7 +132,7 @@ export const index = {
       "name": "Kazateľ",
       "aliases": [
         "Kohelet"
-      ],
+      ]
     },
     {
       "abbreviation": "vlp",
@@ -140,17 +140,17 @@ export const index = {
       "name": "Veľpieseň",
       "aliases": [
         "Pieseň Šalamúnova"
-      ],
+      ]
     },
     {
       "abbreviation": "iz",
       "abb": "Iz",
-      "name": "Izaiáš",
+      "name": "Izaiáš"
     },
     {
       "abbreviation": "jer",
       "abb": "Jer",
-      "name": "Jeremiáš",
+      "name": "Jeremiáš"
     },
     {
       "abbreviation": "nar",
@@ -158,62 +158,62 @@ export const index = {
       "name": "Náreky",
       "aliases": [
         "Plač Jeremiášov"
-      ],
+      ]
     },
     {
       "abbreviation": "ez",
       "abb": "Ez",
-      "name": "Ezechiel",
+      "name": "Ezechiel"
     },
     {
       "abbreviation": "dan",
       "abb": "Dan",
-      "name": "Daniel",
+      "name": "Daniel"
     },
     {
       "abbreviation": "oz",
       "abb": "Oz",
-      "name": "Ozeáš",
+      "name": "Ozeáš"
     },
     {
       "abbreviation": "joel",
       "abb": "Joel",
-      "name": "Joel",
+      "name": "Joel"
     },
     {
       "abbreviation": "am",
       "abb": "Am",
-      "name": "Amos",
+      "name": "Amos"
     },
     {
       "abbreviation": "abd",
       "abb": "Abd",
-      "name": "Abdiáš",
+      "name": "Abdiáš"
     },
     {
       "abbreviation": "jon",
       "abb": "Jon",
-      "name": "Jonáš",
+      "name": "Jonáš"
     },
     {
       "abbreviation": "mich",
       "abb": "Mich",
-      "name": "Micheáš",
+      "name": "Micheáš"
     },
     {
       "abbreviation": "nah",
       "abb": "Nah",
-      "name": "Nahum",
+      "name": "Nahum"
     },
     {
       "abbreviation": "hab",
       "abb": "Hab",
-      "name": "Habakuk",
+      "name": "Habakuk"
     },
     {
       "abbreviation": "sof",
       "abb": "Sof",
-      "name": "Sofoniáš",
+      "name": "Sofoniáš"
     },
     {
       "abbreviation": "ag",
@@ -221,17 +221,17 @@ export const index = {
       "name": "Aggeus",
       "aliases": [
         "Haggeus"
-      ],
+      ]
     },
     {
       "abbreviation": "zach",
       "abb": "Zach",
-      "name": "Zachariáš",
+      "name": "Zachariáš"
     },
     {
       "abbreviation": "mal",
       "abb": "Mal",
-      "name": "Malachiáš",
+      "name": "Malachiáš"
     },
     {
       "abbreviation": "tob",
@@ -284,7 +284,7 @@ export const index = {
       "name": "Matúš",
       "aliases": [
         "Evanjelium podľa Matúša"
-      ],
+      ]
     },
     {
       "abbreviation": "mk",
@@ -292,7 +292,7 @@ export const index = {
       "name": "Marek",
       "aliases": [
         "Evanjelium podľa Mareka"
-      ],
+      ]
     },
     {
       "abbreviation": "lk",
@@ -300,7 +300,7 @@ export const index = {
       "name": "Lukáš",
       "aliases": [
         "Evanjelium podľa Lukáša"
-      ],
+      ]
     },
     {
       "abbreviation": "jn",
@@ -308,7 +308,7 @@ export const index = {
       "name": "Ján",
       "aliases": [
         "Evanjelium podľa Jána"
-      ],
+      ]
     },
     {
       "abbreviation": "sk",
@@ -316,7 +316,7 @@ export const index = {
       "name": "Skutky",
       "aliases": [
         "Skutky apoštolov"
-      ],
+      ]
     },
     {
       "abbreviation": "rim",
@@ -344,7 +344,7 @@ export const index = {
       "name": "Efezanom",
       "aliases": [
         "Efezským"
-      ],
+      ]
     },
     {
       "abbreviation": "flp",
@@ -392,7 +392,7 @@ export const index = {
       "name": "Hebrejom",
       "aliases": [
         "Židom"
-      ],
+      ]
     },
     {
       "abbreviation": "jk",
@@ -400,7 +400,7 @@ export const index = {
       "name": "Jakub",
       "aliases": [
         "Jakubov list"
-      ],
+      ]
     },
     {
       "abbreviation": "1pt",
@@ -433,7 +433,7 @@ export const index = {
       "name": "Júda",
       "aliases": [
         "Júdov list"
-      ],
+      ]
     },
     {
       "abbreviation": "zj",
@@ -441,7 +441,7 @@ export const index = {
       "name": "Zjavenie",
       "aliases": [
         "Zjavenie Jána"
-      ],
+      ]
     }
   ]
 };

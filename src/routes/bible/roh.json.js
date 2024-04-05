@@ -19,7 +19,7 @@ export const index = {
         "Exodus"
       ],
       "abbreviation": "ex",
-      "abb": "2M",
+      "abb": "2M"
     },
     {
       "name": "3. Mojžišova",
@@ -27,7 +27,7 @@ export const index = {
         "Levitikus"
       ],
       "abbreviation": "lv",
-      "abb": "3M",
+      "abb": "3M"
     },
     {
       "name": "4. Mojžišova",
@@ -35,7 +35,7 @@ export const index = {
         "Numeri"
       ],
       "abbreviation": "nm",
-      "abb": "4M",
+      "abb": "4M"
     },
     {
       "name": "5. Mojžišova",
@@ -43,7 +43,7 @@ export const index = {
         "Deuteronómium"
       ],
       "abbreviation": "dt",
-      "abb": "5M",
+      "abb": "5M"
     },
     {
       "name": "Jozue",
@@ -51,7 +51,7 @@ export const index = {
         "Jozua"
       ],
       "abbreviation": "joz",
-      "abb": "Joz",
+      "abb": "Joz"
     },
     {
       "name": "Sudcov",

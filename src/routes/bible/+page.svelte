@@ -12,9 +12,10 @@
   import {index as sep} from "./sep.json.js"
   import {index as ssv} from "./ssv.json.js"
   import {index as bot} from "./bot.json.js"
+  import {index as csp} from "./csp.json.js"
   import {index as kjv} from "./kjv.json.js"
 
-  let bibles = {roh, seb, sep, ssv, bot, kjv};
+  let bibles = {roh, seb, sep, ssv, bot, csp, kjv};
   let loadingBook = false;
 
   let defaultAddress = { bible: "roh", book: "gn", chapter: 1, verse: 1, verseCount: 1 };
@@ -30,6 +31,7 @@
   let addressNext = {...defaultAddress};
   let address2Next = {...defaultAddress};
   let showNextVerses = true;
+  let hideOnSelector = true;
   let line1Next = '';
   let line2Next = '';
   let line3Next = '';
@@ -208,6 +210,7 @@
     a.verse = a.verse || '';
     a.verseCount = a.verseCount || 1;
     return function () {
+      if (hideOnSelector) $shown = false;
       $book = a.book;
       $chapter = a.chapter;
       $verse = a.verse;
@@ -347,6 +350,7 @@
       <option value="sep">Evanjelický</option>
       <option value="ssv">Katolícky</option>
       <option value="bot">Botekov</option>
+      <option value="csp">Český študijný</option>
       <option value="kjv">King James</option>
     </select>
   </div>
@@ -360,6 +364,7 @@
       <option value="sep">Evanjelický</option>
       <option value="ssv">Katolícky</option>
       <option value="bot">Botekov</option>
+      <option value="csp">Český študijný</option>
       <option value="kjv">King James</option>
     </select>
   </div>
@@ -378,10 +383,14 @@
       <input type="checkbox" bind:checked={$verseNumbers} /> Čísla veršov
     </label>
   </div>
-
   <div class="bible">
     <label>
       <input type="checkbox" bind:checked={showNextVerses} /> Nasledujúce verše
+    </label>
+  </div>
+  <div class="bible">
+    <label>
+      <input type="checkbox" bind:checked={hideOnSelector} /> Skryť pri výbere knihy
     </label>
   </div>
 
