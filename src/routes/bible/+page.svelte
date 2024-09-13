@@ -15,13 +15,14 @@
   import {index as csp} from "./csp.json.js"
   import {index as kjv} from "./kjv.json.js"
 
+  let mounted = false;
   let bibles = {roh, seb, sep, ssv, bot, csp, kjv};
   let loadingBook = false;
 
   let defaultAddress = { bible: "roh", book: "gn", chapter: 1, verse: 1, verseCount: 1 };
   let bookList = [];
-  let books1 = new Map();
-  let books2 = new Map();
+  let books1 = writable(new Map());
+  let books2 = writable(new Map());
 
   let bookFilter = "";
   let shownBook;
@@ -77,25 +78,28 @@
     bibleid2 = wrapStore(overlay.get('bibleid2'), bibleid2);
     allinone = wrapStore(overlay.get('allinone'), allinone);
 
+    mounted = true;
     return () => {};
   })
 
   $: address = {bible: $bibleid, book: $book, chapter: $chapter, verse: $verse, verseCount: $verseCount};
   $: address2 = {bible: $bibleid2, book: $book, chapter: $chapter, verse: $verse, verseCount: $verseCount};
-  $: $line1 = addressAsString(address, books1);
-  $: $line2 = addressContent(address, books1, $verseNumbers);
-  $: $line3 = addressAsString(address2, books2);
-  $: $line4 = addressContent(address2, books2, $verseNumbers);
-  $: addressNext = incrementVerse({...address});
-  $: address2Next = incrementVerse({...address2});
-  $: line1Next = addressAsString(addressNext, books1);
-  $: line2Next = addressContent(addressNext, books1, $verseNumbers);
-  $: line3Next = addressAsString(address2Next, books2);
-  $: line4Next = addressContent(address2Next, books2, $verseNumbers);
+  $: loadBook(address.bible, address.book, $books1, books1);
+  $: $line1 = addressAsString(address, $books1);
+  $: $line2 = addressContent(address, $books1, $verseNumbers);
+  $: loadBook(address2.bible, address2.book, $books2, books2);
+  $: $line3 = addressAsString(address2, $books2);
+  $: $line4 = addressContent(address2, $books2, $verseNumbers);
+  $: addressNext = nextVerse({...address});
+  $: address2Next = nextVerse({...address2});
+  $: line1Next = addressAsString(addressNext, $books1);
+  $: line2Next = addressContent(addressNext, $books1, $verseNumbers);
+  $: line3Next = addressAsString(address2Next, $books2);
+  $: line4Next = addressContent(address2Next, $books2, $verseNumbers);
   $: $allinone = JSON.stringify({shown:$shown, line1:$line1, line2:$line2, line3:$line3, line4:$line4})
   $: loadBible($bibleid || 'roh', books1, true);
   $: loadBible($bibleid2, books2, false);
-  $: shownBook = books1[$book] || {chapters: {}};
+  $: shownBook = $books1[$book] || {chapters: {}};
   $: filteredBooks = bookFilter ? bookList.filter(matchesBook) : bookList;
   $: chapterLength = ((shownBook.chapters||{})[$chapter]||[]).length;
   $: bookLength = Object.keys(shownBook.chapters||{}).length;
@@ -106,36 +110,41 @@
     : lastAddresses;
   */
 
-  function loadBible(bibleid, books, updateBookList) {
-    if (!bibleid) {
-      books.clear();
-      return;
-    }
-    bibles[bibleid].books.forEach(function(book) {
-      books[book.abbreviation] = book;
-    })
-    if (updateBookList) {
-      bookList = bibles[bibleid].books;
-      for (let i=0; i<bookList.length; i++) {
-        bookList[i].index = i;
+  function loadBible(bibleid, bookStore, updateBookList) {
+    bookStore.update(books => {
+      if (!bibleid) {
+        books.clear();
+        return books;
       }
-      /* Redraw */
-      bookList = bookList;
-    }
+      bibles[bibleid].books.forEach(function(book) {
+        books[book.abbreviation] = book;
+      })
+      if (updateBookList) {
+        bookList = bibles[bibleid].books;
+        for (let i=0; i<bookList.length; i++) {
+          bookList[i].index = i;
+        }
+        /* Redraw */
+        // bookList = bookList;
+      }
+      return books;
+    })
   }
 
-  function loadBook(bibleid, abbreviation, books) {
+  function loadBook(bibleid, abbreviation, books, bookStore) {
     if (!bibleid) return;
+    if (books[abbreviation]?.chapters) return; /* already loaded */
+    if (!mounted) return;
     loadingBook = true;
     // console.log('Loading book', bibleid, abbreviation)
-    fetch('/bible/' + (bibleid || 'roh') + '/' + abbreviation + '.json')
+    fetch(`/bible/${bibleid}/${abbreviation}.json`)
     .then(response => response.json())
     .then(data => {
-      books[abbreviation].chapters = data;
-      /* Redraw */
-      address = address;
+      bookStore.update(books => {
+        books[abbreviation].chapters = data;
+        return books;
+      })
       loadingBook = false;
-      $book = $book;
       // console.log('loadedBook', bibleid, abbreviation);
     })
   }
@@ -178,10 +187,9 @@
     if (address === undefined || !address.bible) return '';
     var content = '';
     var book = books[address.book];
-    // console.log('addressContent', bibleid, address, books);
+    // console.log('addressContent', bibleid, address, $books);
     if (book) {
       if (!book.chapters) {
-        loadBook(address.bible, address.book, books);
         return content;
       }
       if (address.verse && book.chapters[address.chapter]) {
@@ -231,50 +239,50 @@
     }
   }
 
-  function decrementVerse(address) {
+  function prevVerse(address) {
     address.verse = +address.verse - address.verseCount;
     if (address.verse <= 0) {
-      address = decrementChapter(address);
-      chapterLength = books1[address.book].chapters[address.chapter].length;
+      address = prevChapter(address);
+      chapterLength = $books1[address.book].chapters[address.chapter].length;
       address.verse = chapterLength;
     }
     return address;
   };
 
-  function incrementVerse(address) {
+  function nextVerse(address) {
     address.verse = +address.verse + address.verseCount;
     if (address.verse > chapterLength) {
-      address = incrementChapter(address);
+      address = nextChapter(address);
     }
     return address;
   };
 
-  function decrementChapter(address) {
+  function prevChapter(address) {
     address.chapter = +address.chapter - 1;
     if (address.chapter <= 0) {
-      decrementBook();
-      address.chapter = Object.keys(books1[address.book].chapters||{}).length;
+      prevBook();
+      address.chapter = Object.keys($books1[address.book].chapters||{}).length;
     }
   };
 
-  function incrementChapter() {
+  function nextChapter() {
     address.chapter = +address.chapter + 1;
     if (address.chapter > bookLength) {
-      address = incrementBook(address);
+      address = nextBook(address);
       address.chapter = 1;
       address.verse = 1;
     }
   };
 
-  function decrementBook(address) {
-    const newIndex = books1[address.book].index - 1 + bookList.length;
+  function prevBook(address) {
+    const newIndex = $books1[address.book].index - 1 + bookList.length;
     address.book = bookList[newIndex%bookList.length].abbreviation;
     console.log('newIndex', newIndex, $book);
     return address;
   };
 
-  function incrementBook(address) {
-    const newIndex = books1[address.book].index + 1;
+  function nextBook(address) {
+    const newIndex = $books1[address.book].index + 1;
     address.book = bookList[newIndex%bookList.length].abbreviation;
     return address;
   };
@@ -292,7 +300,7 @@
 <div class="address-filter">
   {#each lastAddresses as addr, i}
   <div class="address-item btn-group">
-    <button class="address-set btn" class:btn-primary={equalAddresses(addr, address)} on:click={addressSelector(addr)}>{addressAsString(addr, books1) || (addr.book+' '+addr.chapter+','+addr.verse)}</button>
+    <button class="address-set btn" class:btn-primary={equalAddresses(addr, address)} on:click={addressSelector(addr)}>{addressAsString(addr, $books1) || (addr.book+' '+addr.chapter+','+addr.verse)}</button>
     <button class="btn btn-secondary address-remove" on:click={removeLastAddress(i)}>×</button>
   </div>
   {/each}
@@ -301,16 +309,16 @@
 <div style="display: inline-block; margin: .5rem; vertical-align: top;">
   Kapitola: {$chapter} z {bookLength}
   <NumberPad bind:value={$chapter} max={bookLength} />
-  <button class="btn btn-primary" on:click={decrementChapter} style="line-height: 2rem;"
-  >⇦</button><button class="btn btn-primary" on:click={incrementChapter} style="line-height: 2rem;"
+  <button class="btn btn-primary" on:click={function(){$chapter=Math.max(1,$chapter-1)}} style="line-height: 2rem;"
+  >⇦</button><button class="btn btn-primary" on:click={function(){$chapter=Math.min($chapter+1,bookLength)}} style="line-height: 2rem;"
   >⇨</button><br/><button class="control-button btn" style="line-height: 2rem;" on:click={toggleLine} class:btn-danger={$shown} class:btn-success={!$shown}
   >{#if $shown}Skryť{:else}Zobraziť{/if}</button>
 </div>
 <div style="display: inline-block; margin: .5rem; vertical-align: top;">
   Verš: {$verse} {#if $verseCount>1} - {$verse + $verseCount - 1}{/if} z {chapterLength}
   <NumberPad bind:value={$verse} max={chapterLength} />
-  <button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$verse=Math.max(1,$verse-$verseCount)}} disabled={$verse <=1 }
-  >⇦</button><button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$verse=Math.min($verse+$verseCount,chapterLength)}} disabled={$verse+$verseCount> chapterLength}
+  <button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$verse=Math.max(1,$verse-$verseCount)}} disabled={$verse<=1}
+  >⇦</button><button class="btn btn-primary" style="line-height: 2rem;" on:click={function(){$verse=Math.min($verse+$verseCount,chapterLength)}} disabled={$verse+$verseCount>chapterLength}
   >⇨</button><br/><button disabled style="background: transparent;"
   ></button><button class="btn btn-primary" on:click={function(){$verseCount -=1 }} style="line-height: 2rem;" disabled={$verseCount<=1}
   >-1</button><button class="btn btn-primary" on:click={function(){$verseCount +=1 }} style="line-height: 2rem;" disabled={$verseCount>chapterLength}
