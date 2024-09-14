@@ -26,6 +26,7 @@ const server = new WebSocket.Server({
 });
 
 let STATES = {};
+let CLIENTS = {};
 
 server.on('connection', function connection(ws, req) {
     const ip = req.socket.remoteAddress;
@@ -35,21 +36,44 @@ server.on('connection', function connection(ws, req) {
     if (!STATES[pathname]) {
         STATES[pathname] = {};
     }
-    ws.pathname = pathname;
+    if (!CLIENTS[pathname]) {
+        CLIENTS[pathname] = new Set();
+    }
+    CLIENTS[pathname].add(ws);
     ws.send(JSON.stringify(STATES[pathname]));
 
     ws.on('message', function incoming(message) {
-        message = message.toString()
-        console.log(ip, port, message)
+        // console.log(ip, port, message)
         const data = JSON.parse(message);
         Object.assign(STATES[pathname], data);
         // Broadcast to everyone else.
-        server.clients.forEach(function each(client) {
-            if (client.pathname == pathname
-              && client !== ws
-              && client.readyState === WebSocket.OPEN) {
+        CLIENTS[pathname].forEach(function each(client) {
+            if (client !== ws && client.readyState === WebSocket.OPEN) {
                 client.send(message);
             }
         });
     });
+
+    ws.isAlive = true;
+    ws.on('error', console.error);
+    ws.on('pong', heartbeat);
+    ws.on('close', function() {
+        CLIENTS[pathname].delete(ws);
+    });
+});
+
+function heartbeat() {
+    this.isAlive = true;
+}
+
+const interval = setInterval(function ping() {
+    server.clients.forEach(function each(ws) {
+        if (server.isAlive === false) return ws.terminate();
+        ws.isAlive = false;
+        ws.ping();
+    });
+}, 30000);
+
+server.on('close', function close() {
+    clearInterval(interval);
 });
