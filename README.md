@@ -1,5 +1,5 @@
-# Gun Overlay
-Simple and powerfull remote controlled html pages useful for overlays in OBS Studio, Casper CD, XSplit or simply fullscreen browser.
+# Web Overlays
+Simple and powerfull remote controlled html pages useful for overlays in OBS Studio, CasperCG, XSplit or simply fullscreen browser.
 
 ## Features
 - server holds overlay state
@@ -13,20 +13,15 @@ NodeJS is needed. You can download it from https://nodejs.org/en/
     npm install
 
 # Run
-## 1. Run websocket server
-Node server:
-
-    node server.js
-
-## 2. Open controller
+## 1. Open controller
 Open in browser `scoreboard/controller.html`.
 
-## 3. Open overlay
-Open in browser `scoreboard/overlay.html`
+## 2. Open overlay
+Open in browser `scoreboard/overlay.html` on other PC or display.
 
 # Setup in playout software
 Setting you might need to change is websocket URI in `overlay.html` and `controller.html` in directory `your-overlay/`.
-Set it to the same IP address and port as your server is running on, (i.e. `http://127.0.0.1:8080/gun`).
+Set it to the same IP address and port as your server is running on, (i.e. `http://127.0.0.1:3000/gun`).
 
 ## OBS Studio
 1. Click the plus button under Sources
@@ -49,6 +44,14 @@ https://www.xsplit.com/broadcaster/manual/sources/webpage
 
 # New overlays
 You can create your own overlay and associated controller without implementing server.
+
+# Self-hosted server
+
+    HOST=0.0.0.0 PORT=8089 node server-ws.cjs
+    or 
+    HOST=0.0.0.0 PORT=3000 node server-gun.cjs
+    or 
+    HOST=0.0.0.0 PORT=8081 node server-mqtt.cjs
 
 ## Server API
 https://gun.eco/docs/API
