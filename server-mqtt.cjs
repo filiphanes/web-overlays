@@ -1,7 +1,7 @@
 const aedes = require('aedes')()
 const httpServer = require('http').createServer()
 const ws = require('websocket-stream')
-const port = 8888
+const port = process.env.PORT || 8888
 
 ws.createServer({ server: httpServer }, aedes.handle)
 
@@ -10,13 +10,12 @@ httpServer.listen(port, function () {
 })
 
 aedes.authorizeSubscribe = function (client, sub, callback) {
-  if (sub.topic === 'aaaa') {
-    return callback(new Error('wrong topic'))
-  }
-  if (sub.topic === 'bbb') {
-    // overwrites subscription
-    sub.topic = 'foo'
-    sub.qos = 1
+  const s = sub.topic.split('/');
+  if (s.length <= 2) {
+    return callback(new Error('too short topic'))
+  } else if (s[0] == '+' || s[1] == '#' ||
+             s[0] == '+' || s[1] == '#' ) {
+    return callback(new Error('wildcards not allowed here'))
   }
   callback(null, sub)
 }
