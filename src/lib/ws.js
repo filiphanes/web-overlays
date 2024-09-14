@@ -17,6 +17,7 @@ function websocketWrapper(options) {
     return {
       set: (value) => {
         socket.send(JSON.stringify({[key]: value}));
+        set(value); // websocket server does not return our messages
       },
       subscribe,
     }

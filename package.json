@@ -10,7 +10,7 @@
   "homepage": "https://github.com/filiphanes/gun-overlays#readme",
   "main": "server.js",
   "scripts": {
-    "start": "node server.cjs",
+    "start": "node server-gun.cjs",
     "dev": "vite dev",
     "build": "vite build",
     "package": "vite package",
@@ -39,7 +39,6 @@
     "@sveltejs/adapter-static": "^3.0.4",
     "@sveltejs/kit": "^2.5.27",
     "@sveltejs/vite-plugin-svelte": "^3.1.2",
-    "gun": "^0.2020.1240",
     "mqtt": "^5.10.1",
     "smui-theme": "7.0.0",
     "svelte": "^4.2.19",
@@ -47,5 +46,9 @@
     "vite": "^5.4.3",
     "wrangler": "^3.74.0"
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "gun": "^0.2020.1240",
+    "ws": "^8.18.0"
+  }
 }

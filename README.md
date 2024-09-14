@@ -19,10 +19,10 @@ Node server:
     node server.js
 
 ## 2. Open controller
-Open in browser `lower-third-simple/controller.html`.
+Open in browser `scoreboard/controller.html`.
 
 ## 3. Open overlay
-Open in browser `lower-third-simple/overlay.html`
+Open in browser `scoreboard/overlay.html`
 
 # Setup in playout software
 Setting you might need to change is websocket URI in `overlay.html` and `controller.html` in directory `your-overlay/`.

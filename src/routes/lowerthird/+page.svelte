@@ -10,7 +10,7 @@
   import { mqttWrapper } from '$lib/mqtt.js';
   import { websocketWrapper } from '$lib/ws.js';
   import { page } from "$app/stores";
-  let showStore = writable(false);
+  let show  = writable(false);
   let line1 = writable("Text Line 1");
   let line2 = writable("Text Line 2");
 		
@@ -34,17 +34,11 @@
     } else if (options.gun) {
       wrapStore = gunWrapper(options)
     }
-    showStore = wrapStore('show', showStore);
+    show  = wrapStore('show', show);
     line1 = wrapStore('line1', line1);
     line2 = wrapStore('line2', line2);
   });
 	
-  function show() {
-    $showStore = true;
-  }
-  function hide() {
-    $showStore = false;
-  }
   </script>
 
 <div class="container-fluid">
@@ -58,8 +52,8 @@
 						<input class="form-control" type="text" id="line2" bind:value={$line2}>
 					</div>
 					<div>
-						<button class="btn btn-lg btn-success" on:click={show}>Show</button>
-						<button class="btn btn-lg btn-primary" on:click={hide}>Hide</button>
+						<button class="btn btn-lg btn-success" on:click={()=>{$show=true}}>Show</button>
+						<button class="btn btn-lg btn-primary" on:click={()=>{$show=false}}>Hide</button>
 					</div>
 				</div>
 			</div>

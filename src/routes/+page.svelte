@@ -18,9 +18,9 @@
 
 <h2>Lower third</h2>
 <ul>
-	<li><a href="lower-third/">Controller</a></li>
-	<li><a href="lower-third/overlay.html">Overlay</a></li>
-	<li><a href="lower-third/right-corner.html">Right corder</a></li>
+	<li><a href="lowerthird/">Controller</a></li>
+	<li><a href="lowerthird/overlay.html">Overlay</a></li>
+	<li><a href="lowerthird/right-corner.html">Right corder</a></li>
 </ul>
 
 <h2>Scoreboard</h2>

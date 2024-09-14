@@ -19,11 +19,11 @@
   import { websocketWrapper } from '$lib/ws.js';
   import { page } from "$app/stores";
 
+  let show = writable(false);
   let team1  = writable("Team 1");
   let team2  = writable("Team 2");
   let score1 = writable("Score 1");
   let score2 = writable("Score 2");
-  let show = writable(false);
   
   onMount(function(){
     let wrapStore;
@@ -45,19 +45,13 @@
     } else if (options.gun) {
       wrapStore = gunWrapper(options)
     }
-	team1 = wrapStore('team1', team1);
-	team2 = wrapStore('team2', team2);
+	show   = wrapStore('show', show);
+	team1  = wrapStore('team1', team1);
+	team2  = wrapStore('team2', team2);
 	score1 = wrapStore('score1', score1);
 	score2 = wrapStore('score2', score2);
-	show = wrapStore('show', show);
 })
 
-  function showBoard() {
-    $show = true;
-  }
-  function hideBoard() {
-    $show = false;
-  }
 </script>
 		
 <div class="container-fluid my-3">
@@ -69,25 +63,25 @@
 					<div class="form-row">
 						<div class="form-group col-md-6">
 							<label for="team1">Team 1:</label>
-							<input class="form-control" type="text" placeholder="Team 1 Name" id="team1" bind:value={team1}>
+							<input class="form-control" type="text" placeholder="Team 1 Name" id="team1" bind:value={$team1}>
 						</div>
 						<div class="form-group col-md-6">
 							<label for="team2">Team 2:</label>
-							<input class="form-control" type="text" placeholder="Team 2 Name" id="team2" bind:value={team2}>
+							<input class="form-control" type="text" placeholder="Team 2 Name" id="team2" bind:value={$team2}>
 						</div>
 					</div>
 					<div class="form-group">
 						<p>Score:</p>
 						<div class="input-group mb-3">
-							<input class="form-control" type="number" id="score1" bind:value={score1}>
+							<input class="form-control" type="number" id="score1" bind:value={$score1}>
 							<span class="form-control input-group-text col-1">-</span>
-							<input class="form-control" type="number" id="score2" bind:value={score2}>
+							<input class="form-control" type="number" id="score2" bind:value={$score2}>
 						</div>
 						<small class="form-text text-muted">Team names and Scores are updated automatically on change and show.</small>
 					</div>
 					<div>
-						<button class="btn btn-lg btn-success" on:click={showBoard}>Show</button>
-						<button class="btn btn-lg btn-primary" on:click={hideBoard}>Hide</button>
+						<button class="btn btn-lg btn-success" on:click={()=>{$show=true}}>Show</button>
+						<button class="btn btn-lg btn-primary" on:click={()=>{$show=false}}>Hide</button>
 					</div>
 				</div>
 			</div>
