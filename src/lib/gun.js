@@ -1,5 +1,26 @@
 import Gun from "gun"
 
+function gunWrapper(options) {
+  const gun = Gun([options.gun])
+  let root = gun;
+  for (const s of options.path.split('/')) {
+    if (s) root = root.get(s);
+  }
+
+  return function(key, writableStore) {
+    const { set, subscribe } = writableStore;
+    const ref = root.get(key);
+    ref.on(function(data, key){
+      // console.log('on', key, data);
+      set(data)
+    });
+    return {
+      set: function(value) {ref.put(value)},
+      subscribe,
+    }
+  }
+}
+
 Gun.chain.subscribe = function (publish) {
 	var gun = this
 	var at = gun._
@@ -24,18 +45,6 @@ Gun.chain.subscribe = function (publish) {
 	return gun.off
 }
 
-function wrapStore(ref, writableStore) {
-	const { set, subscribe } = writableStore;
-	ref.on(function(data, key){
-		// console.log('on', key, data);
-		set(data)
-	});
-	return {
-		set: function(value) {ref.put(value)},
-		subscribe,
-	}
-}
-
 function createMapStore(ref) {
 	const { update, subscribe } = writable({})
 	ref.on(function (data, key) {
@@ -57,6 +66,6 @@ function createMapStore(ref) {
 
 export {
 	Gun,
-	wrapStore,
+	gunWrapper,
 	createMapStore,
 }

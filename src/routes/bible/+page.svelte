@@ -4,7 +4,9 @@
 <script type="javascript">
   import { onMount } from "svelte";
   import NumberPad from "$lib/NumberPad.svelte";
-  import { Gun, wrapStore } from '$lib/gun.js';
+  import { gunWrapper } from '$lib/gun.js';
+  import { mqttWrapper } from '$lib/mqtt.js';
+  import { websocketWrapper } from '$lib/ws.js';
   import { page } from "$app/stores";
 	import { writable } from 'svelte/store';
   import {index as roh} from "./roh.json.js"
@@ -15,7 +17,7 @@
   import {index as csp} from "./csp.json.js"
   import {index as kjv} from "./kjv.json.js"
 
-  let mounted = false;
+  let isMounted = false;
   let bibles = {roh, seb, sep, ssv, bot, csp, kjv};
   let loadingBook = false;
 
@@ -57,28 +59,42 @@
   let allinone = writable('{}');
 
 	onMount(() => {
-    const gun = Gun([
-        'https://gun.filiphanes.sk/gun',
-    ])
-
-    overlay = gun.get('bible').get($page.url.hash.slice(1) || 'demo');
+    let wrapStore;
+    const options = {
+      gun: 'https://gun.filiphanes.sk/gun',
+      mqtt: undefined,
+      ws: undefined,
+      password: $page.url.hash.slice(1) || 'demo',
+      path: undefined,
+    };
+    for (const [key, value] of $page.url.searchParams) {
+      options[key] = value;
+    }
+    options.path = options.path || `bible/${options.password}/`;
+    if (options.ws) {
+      wrapStore = websocketWrapper(options);
+    } else if (options.mqtt) {
+      wrapStore = mqttWrapper(options);
+    } else if (options.gun) {
+      wrapStore = gunWrapper(options)
+    }
     /* Synced variables */
-    shown   = wrapStore(overlay.get('show'), shown);
-    line1   = wrapStore(overlay.get('line1'), line1);
-    line2   = wrapStore(overlay.get('line2'), line2);
-    line3   = wrapStore(overlay.get('line3'), line3);
-    line4   = wrapStore(overlay.get('line4'), line4);
-    book    = wrapStore(overlay.get('book'), book);
-    chapter = wrapStore(overlay.get('chapter'), chapter);
-    verse   = wrapStore(overlay.get('verse'), verse);
-    verseCount = wrapStore(overlay.get('verseCount'), verseCount);
-    verseNumbers = wrapStore(overlay.get('verseNumbers'), verseNumbers);
-    theme   = wrapStore(overlay.get('theme'), theme);
-    bibleid = wrapStore(overlay.get('bibleid'), bibleid);
-    bibleid2 = wrapStore(overlay.get('bibleid2'), bibleid2);
-    allinone = wrapStore(overlay.get('allinone'), allinone);
+    shown    = wrapStore('show', shown);
+    line1    = wrapStore('line1', line1);
+    line2    = wrapStore('line2', line2);
+    line3    = wrapStore('line3', line3);
+    line4    = wrapStore('line4', line4);
+    theme    = wrapStore('theme', theme);
+    bibleid  = wrapStore('bibleid', bibleid);
+    bibleid2 = wrapStore('bibleid2', bibleid2);
+    book     = wrapStore('book', book);
+    chapter  = wrapStore('chapter', chapter);
+    verse    = wrapStore('verse', verse);
+    verseCount = wrapStore('verseCount', verseCount);
+    verseNumbers = wrapStore('verseNumbers', verseNumbers);
+    allinone = wrapStore('allinone', allinone);  /* TODO: remove */
 
-    mounted = true;
+    isMounted = true;
     return () => {};
   })
 
@@ -134,7 +150,7 @@
   function loadBook(bibleid, abbreviation, books, bookStore) {
     if (!bibleid) return;
     if (books[abbreviation]?.chapters) return; /* already loaded */
-    if (!mounted) return;
+    if (!isMounted) return;
     loadingBook = true;
     // console.log('Loading book', bibleid, abbreviation)
     fetch(`/bible/${bibleid}/${abbreviation}.json`)
@@ -165,7 +181,7 @@
       book: address.book,
       chapter: address.chapter,
       verse: address.verse,
-      verseCount: address.verseCount
+      verseCount: address.verseCount,
     });
     lastAddresses = lastAddresses.filter((h, i) => i === 0 || !equalAddresses(h, address));
   }
