@@ -14,7 +14,9 @@
 <script>
   import { onMount } from "svelte";
   import { writable } from 'svelte/store';
-  import { Gun, wrapStore } from '$lib/gun.js';
+  import { gunWrapper } from '$lib/gun.js';
+  import { mqttWrapper } from '$lib/mqtt.js';
+  import { websocketWrapper } from '$lib/ws.js';
   import { page } from "$app/stores";
 
   let team1  = writable("Team 1");
@@ -24,15 +26,30 @@
   let show = writable(false);
   
   onMount(function(){
-    const gun = Gun([
-        'https://gun.filiphanes.sk/gun',
-    ])
-	const overlay = gun.get('scoreboard').get($page.url.hash || 'demo');
-	team1 = wrapStore(overlay.get('team1'), team1);
-	team2 = wrapStore(overlay.get('team1'), team1);
-	score1 = wrapStore(overlay.get('score1'), team1);
-	score2 = wrapStore(overlay.get('score2'), team1);
-	show = wrapStore(overlay.get('show'), show);
+    let wrapStore;
+    const options = {
+      gun: 'https://gun.filiphanes.sk/gun',
+      mqtt: undefined,
+      ws: undefined,
+      password: $page.url.hash.slice(1) || 'demo',
+      path: undefined,
+    };
+    for (const [key, value] of $page.url.searchParams) {
+      options[key] = value;
+    }
+    options.path = options.path || `scoreboard/${options.password}/`;
+    if (options.ws) {
+      wrapStore = websocketWrapper(options);
+    } else if (options.mqtt) {
+      wrapStore = mqttWrapper(options);
+    } else if (options.gun) {
+      wrapStore = gunWrapper(options)
+    }
+	team1 = wrapStore('team1', team1);
+	team2 = wrapStore('team2', team2);
+	score1 = wrapStore('score1', score1);
+	score2 = wrapStore('score2', score2);
+	show = wrapStore('show', show);
 })
 
   function showBoard() {

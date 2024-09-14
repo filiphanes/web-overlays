@@ -6,20 +6,37 @@
 <script>
   import { onMount } from "svelte";
   import { writable } from 'svelte/store';
-  import { Gun, wrapStore } from '$lib/gun.js';
+  import { gunWrapper } from '$lib/gun.js';
+  import { mqttWrapper } from '$lib/mqtt.js';
+  import { websocketWrapper } from '$lib/ws.js';
   import { page } from "$app/stores";
   let showStore = writable(false);
   let line1 = writable("Text Line 1");
   let line2 = writable("Text Line 2");
 		
   onMount(function(){
-    const gun = Gun([
-        'https://gun.filiphanes.sk/gun',
-    ])
-    let overlay = gun.get('scoreboard').get($page.url.hash || 'demo');
-    showStore = wrapStore(overlay.get('show'), showStore);
-    line1 = wrapStore(overlay.get('line1'), line1);
-    line2 = wrapStore(overlay.get('line2'), line2);
+    let wrapStore;
+    const options = {
+      gun: 'https://gun.filiphanes.sk/gun',
+      mqtt: undefined,
+      ws: undefined,
+      password: $page.url.hash.slice(1) || 'demo',
+      path: undefined,
+    };
+    for (const [key, value] of $page.url.searchParams) {
+      options[key] = value;
+    }
+    options.path = options.path || `lowerthird/${options.password}/`;
+    if (options.ws) {
+      wrapStore = websocketWrapper(options);
+    } else if (options.mqtt) {
+      wrapStore = mqttWrapper(options);
+    } else if (options.gun) {
+      wrapStore = gunWrapper(options)
+    }
+    showStore = wrapStore('show', showStore);
+    line1 = wrapStore('line1', line1);
+    line2 = wrapStore('line2', line2);
   });
 	
   function show() {
