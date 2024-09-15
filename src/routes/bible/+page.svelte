@@ -70,7 +70,7 @@
     for (const [key, value] of $page.url.searchParams) {
       options[key] = value;
     }
-    options.path = options.path || `bible/${options.password}/`;
+    options.path = options.path || `bible/${options.password}`;
     if (options.ws) {
       wrapStore = websocketWrapper(options);
     } else if (options.mqtt) {

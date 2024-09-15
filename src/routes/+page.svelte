@@ -5,7 +5,8 @@
 <h2>Bible</h2>
 <ul>
 	<li><a href="bible/">Controller</a></li>
-	<li><a href="bible/overlay.html">Lower third simple</a></li>
+	<li><a href="bible/overlay.html">Overlay Gun</a></li>
+	<li><a href="bible/overlay-ws.html">Overlay WebSocket</a></li>
 	<li><a href="bible/full-diagonal.html">Full diagonal</a></li>
 </ul>
 

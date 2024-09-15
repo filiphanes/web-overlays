@@ -43,6 +43,7 @@ server.on('connection', function connection(ws, req) {
     ws.send(JSON.stringify(STATES[pathname]));
 
     ws.on('message', function incoming(message) {
+        message = message.toString()
         // console.log(ip, port, message)
         const data = JSON.parse(message);
         Object.assign(STATES[pathname], data);
@@ -59,6 +60,9 @@ server.on('connection', function connection(ws, req) {
     ws.on('pong', heartbeat);
     ws.on('close', function() {
         CLIENTS[pathname].delete(ws);
+        if (CLIENTS[pathname].size == 0) {
+            CLIENTS[pathname] = undefined;
+        }
     });
 });
 

@@ -3,6 +3,7 @@ import mqtt from "mqtt";
 function mqttWrapper(options) {
   const client = mqtt.connect(options.mqtt);
   const listeners = {};
+  if (!options.path.endsWith('/')) options.path += '/';
 
 	client.subscribe(options.path+'+');
 	client.on('message', (topic, message) => {
