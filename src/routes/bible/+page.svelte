@@ -3,12 +3,10 @@
 </svelte:head>
 <script type="javascript">
   import { onMount } from "svelte";
-  import NumberPad from "$lib/NumberPad.svelte";
-  import { gunWrapper } from '$lib/gun.js';
-  import { mqttWrapper } from '$lib/mqtt.js';
-  import { websocketWrapper } from '$lib/ws.js';
-  import { page } from "$app/stores";
 	import { writable } from 'svelte/store';
+  import { page } from "$app/stores";
+  import NumberPad from "$lib/NumberPad.svelte";
+  import { makeWrapStore } from '$lib/wrap.js';
   import {index as roh} from "./roh.json.js"
   import {index as seb} from "./seb.json.js"
   import {index as sep} from "./sep.json.js"
@@ -59,25 +57,11 @@
   let allinone = writable('{}');
 
 	onMount(() => {
-    let wrapStore;
-    const options = {
-      gun: 'https://gun.filiphanes.sk/gun',
-      mqtt: undefined,
-      ws: undefined,
+    const wrapStore = makeWrapStore({
+      space: 'bible',
       password: $page.url.hash.slice(1) || 'demo',
-      path: undefined,
-    };
-    for (const [key, value] of $page.url.searchParams) {
-      options[key] = value;
-    }
-    options.path = options.path || `bible/${options.password}`;
-    if (options.ws) {
-      wrapStore = websocketWrapper(options);
-    } else if (options.mqtt) {
-      wrapStore = mqttWrapper(options);
-    } else if (options.gun) {
-      wrapStore = gunWrapper(options)
-    }
+      ...Object.fromEntries($page.url.searchParams)
+    });
     /* Synced variables */
     shown    = wrapStore('show', shown);
     line1    = wrapStore('line1', line1);
