@@ -1,0 +1,172 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Bible overlay</title>
+<style>
+@import url('/fonts/Roboto.css');
+@import url('/fonts/OpenSans.css');
+
+html {
+	width: 1920px;
+	height: 1080px;
+    overflow: hidden;
+}
+body {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	overflow: hidden;
+	font-family: Roboto, 'Open Sans', 'Helvetica Neue', -apple-system, BlinkMacSystemFont, 'Segoe UI', Oxygen, Ubuntu, Cantarell, sans-serif;
+	background: transparent;
+}
+#overlay {
+	position: absolute;
+    bottom: 6%;
+    left: 2%;
+    opacity: 0;
+    transition: all .9s linear;
+}
+#overlay.show {
+    opacity: 1;
+}
+
+#line1,
+#line3 {
+    font-size: 5vh;
+    font-weight: bold;
+    padding: 0 2rem;
+    color: white;
+    text-shadow: 2px 2px 2px black, -1px -1px black;
+    white-space: nowrap;
+}
+#line2,
+#line4 {
+    font-size: 6vh;
+    padding: 0 2rem;
+    color: white;
+    line-height: 1.1;
+    text-shadow: 2px 2px 2px black, -1px -1px black;
+}
+#bg {
+    display: none;
+}
+</style>
+
+<style>
+.fullscreen-white-bg #overlay {
+	position: static;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 1;
+}
+.fullscreen-white-bg #bg {
+    background: white;
+    display: block;
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    opacity: .9;
+    transform: rotate(-45deg) translate(0, -100%);
+    transition: transform 1s;
+}
+.fullscreen-white-bg .show #bg {
+    transform: rotate(-45deg) translate(0, 0);
+}
+.fullscreen-white-bg #line1,
+.fullscreen-white-bg #line3 {
+    font-size: 2.5em;
+    font-weight: bold;
+    padding: 0;
+    color: black;
+    margin: 4rem;
+    text-shadow: none;
+    white-space: nowrap;
+    opacity: 0;
+    text-align: center;
+    transition: all .3s linear;
+}
+.fullscreen-white-bg #line2,
+.fullscreen-white-bg #line4 {
+    font-size: 2.3em;
+    padding: 0 18%;
+    color: black;
+    line-height: 1.5;
+    text-shadow: none;
+    opacity: 0;
+    text-align: center;
+    transition: all .3s linear;
+}
+.fullscreen-white-bg .show #line1,
+.fullscreen-white-bg .show #line2,
+.fullscreen-white-bg .show #line3,
+.fullscreen-white-bg .show #line4 {
+    opacity: 1;
+    transform: translate(0, 0);
+}
+</style>
+</head>
+<body>
+    <div id="overlay">
+        <div id="bg"></div>
+        <div id="data">nic</div>
+        <div id="line1">Main header line</div>
+        <div id="line2"></div>
+        <div id="line3"></div>
+        <div id="line4"></div>
+    </div>
+<script src="../js/config.js"></script>
+<script>
+function updateLine(key, val) {
+    document.getElementById(key).innerHTML = val;
+}
+
+const listeners = {
+    line1: updateLine,
+    line2: updateLine,
+    line3: updateLine,
+    line4: updateLine,
+    data: updateLine,
+    show: function(key, val) {
+        document.getElementById('overlay').classList.toggle('show', val);
+    },
+    theme: function(key, val) {
+        document.body.className = val;
+    },
+};
+
+function connectWebSocket() {
+    let ws = new WebSocket(WEBSOCKET_URL+'bible/'+(window.location.hash.slice(1) || 'demo'));
+
+    ws.addEventListener('message', function(event){
+        // console.log(event.data.toString());
+        const data = JSON.parse(event.data.toString());
+        for (const [key, val] of Object.entries(data)) {
+            console.log(key, val);
+            const cb = listeners[key];
+            if (cb) cb(key, val)
+        }
+    })
+
+    ws.addEventListener('error', function(event){
+        console.log('WebSocket closed. ', event);
+        reconnect();
+    })
+}
+
+function reconnect() {
+    reconnectTimeout = setTimeout(function() {
+        console.log('Reconnecting...');
+        connectWebSocket();
+    }, 2000);
+}
+
+// First connection
+connectWebSocket();
+</script>
+</body>
+</html>

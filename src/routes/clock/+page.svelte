@@ -75,7 +75,7 @@
 	<title>Clock</title>
 </svelte:head>
 
-<div class="container" on:click={handleClick}>
+<div class="container" onclick={handleClick}>
 <span class="digital-clock" bind:this={digiClock}>
     {hours % (config.twentyFourHours ? 24 : 12)}:{#if minutes<10}0{/if}{minutes}{#if config.showSeconds}:{#if seconds<10}0{/if}{seconds}{/if}
 </span>

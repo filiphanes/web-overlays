@@ -3,7 +3,7 @@ export const index = {
   "name": "Ekumenický preklad",
   "bibliography": "Slovenský ekumenický preklad, štvrté opravené vydanie, 2017.",
   "copyright": "Slovenská biblická spoločnosť © <a href=\"http://biblickaspolocnost.sk/\" target=\"_blank\">www.biblickaspolocnost.sk</a>.",
-  "books": [
+  "bookslist": [
     {
       "abbreviation": "gn",
       "abb": "Gn",

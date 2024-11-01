@@ -2,6 +2,7 @@ import { gunWrapper } from '$lib/gun.js';
 import { mqttWrapper } from '$lib/mqtt.js';
 import { websocketWrapper } from '$lib/ws.js';
 
+/* Deprecated: use sync.svelte.js */
 function makeWrapStore(opts) {
   let wrapStore;
   const options = {
@@ -20,7 +21,7 @@ function makeWrapStore(opts) {
   } else if (options.mqtt) {
     wrapStore = mqttWrapper(options);
   } else if (options.gun) {
-    wrapStore = gunWrapper(options)
+    wrapStore = gunWrapper(options);
   }
   return wrapStore;
 }

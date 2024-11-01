@@ -4,7 +4,7 @@ export const index = {
   "name": "Jeruzalemská Biblia (Botek)",
   "copyright": "Dobrá kniha © Text zverejnený s láskavým dovolením vydavateľstva Dobrá kniha | www.dobrakniha.sk.",
   "bibliography": "Text Svätého písma z pôvodných jazykov preložil Anton Botek. Štvrté opravené vydanie, 2015.",
-  "books": [
+  "bookslist": [
     {
       "abbreviation": "gn",
       "abb": "Gn",

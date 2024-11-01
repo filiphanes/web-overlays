@@ -1,12 +1,10 @@
 <script>
-  import { createEventDispatcher } from "svelte";
+  let {
+    value = $bindable(""),
+    max = 99999999,
+  } = $props();
 
-  export let value = "";
-  export let max = 99999999;
-
-  const dispatch = createEventDispatcher();
-
-  function select (num) {
+  function select(num) {
     return () => {
       value = Math.min(+value * 10 + num, max||99999999)
     }
@@ -16,21 +14,21 @@
 </script>
 
 <div class="numberpad">
-  <button class="btn btn-primary" on:keyup={select(1)} on:click={select(1)}>1</button>
-  <button class="btn btn-primary" on:keyup={select(2)} on:click={select(2)}>2</button>
-  <button class="btn btn-primary" on:keyup={select(3)} on:click={select(3)}>3</button>
+  <button class="btn btn-primary" onkeyup={select(1)} onclick={select(1)}>1</button>
+  <button class="btn btn-primary" onkeyup={select(2)} onclick={select(2)}>2</button>
+  <button class="btn btn-primary" onkeyup={select(3)} onclick={select(3)}>3</button>
 
-  <button class="btn btn-primary" on:keyup={select(4)} on:click={select(4)}>4</button>
-  <button class="btn btn-primary" on:keyup={select(5)} on:click={select(5)}>5</button>
-  <button class="btn btn-primary" on:keyup={select(6)} on:click={select(6)}>6</button>
+  <button class="btn btn-primary" onkeyup={select(4)} onclick={select(4)}>4</button>
+  <button class="btn btn-primary" onkeyup={select(5)} onclick={select(5)}>5</button>
+  <button class="btn btn-primary" onkeyup={select(6)} onclick={select(6)}>6</button>
 
-  <button class="btn btn-primary" on:keyup={select(7)} on:click={select(7)}>7</button>
-  <button class="btn btn-primary" on:keyup={select(8)} on:click={select(8)}>8</button>
-  <button class="btn btn-primary" on:keyup={select(9)} on:click={select(9)}>9</button>
+  <button class="btn btn-primary" onkeyup={select(7)} onclick={select(7)}>7</button>
+  <button class="btn btn-primary" onkeyup={select(8)} onclick={select(8)}>8</button>
+  <button class="btn btn-primary" onkeyup={select(9)} onclick={select(9)}>9</button>
 
-  <button class="btn btn-primary" on:keyup={backspace} on:click={backspace} disabled={!value}>←</button>
-  <button class="btn btn-primary" on:keyup={select(0)} on:click={select(0)}>0</button>
-  <button class="btn btn-primary" on:keyup={clear} on:click={clear} disabled={!value} >C</button>
+  <button class="btn btn-primary" onkeyup={backspace} onclick={backspace} disabled={!value}>←</button>
+  <button class="btn btn-primary" onkeyup={select(0)} onclick={select(0)}>0</button>
+  <button class="btn btn-primary" onkeyup={clear} onclick={clear} disabled={!value} >C</button>
 </div>
 
 <style>

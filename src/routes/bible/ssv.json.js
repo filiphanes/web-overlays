@@ -4,7 +4,7 @@ export const index = {
   "name": "Katolícky preklad",
   "copyright": "© Konferencia biskupov Slovenska © Spolok sv. Vojtecha. Text zverejnený s láskavým dovolením Spolku svätého Vojtecha www.ssv.sk.",
   "bibliography": "Preklad podľa vydaní Spolku svätého Vojtecha v Trnave: STARÝ ZÁKON z roku 1955 – NOVÝ ZÁKON z roku 1986.",
-  "books": [
+  "bookslist": [
     {
       "abbreviation": "gn",
       "abb": "Gn",
@@ -447,8 +447,8 @@ export const index = {
   ]
 };
 
-    export async function get() {
-      return {
-        body: index,
-      }
-    }
+export async function get() {
+  return {
+    body: index,
+  }
+}

@@ -3,7 +3,7 @@ export const index = {
   "name": "Roháčkov preklad",
   "bibliography": "Preklad z pôvodných jazykov preložil prof. Jozef Roháček. Podľa druhého revidovaného vydania z roku 1969.",
   "copyright": "Ivan Roháček © Text zverejnený s láskavým dovolením pána Ivana Roháčka.",
-  "books": [
+  "bookslist": [
     {
       "abbreviation": "gn",
       "abb": "1M",

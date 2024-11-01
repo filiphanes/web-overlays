@@ -3,7 +3,7 @@ export const index = {
   "name": "King James Version",
   "bibliography": "1611 English translation of the Christian Bible",
   "copyright": "Public domain",
-  "books": [
+  "bookslist": [
     {
       "abbreviation": "gn",
       "abb": "1M",

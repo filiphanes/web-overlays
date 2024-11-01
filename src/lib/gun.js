@@ -1,11 +1,29 @@
 import Gun from "gun"
 
+
+class GunBroker {
+	constructor(options) {
+		this.gun = Gun([options.gun])
+		this.root = this.gun;
+		for (const s of options.path.split('/')) {
+			if (s) this.root = this.root.get(s);
+		}
+		if (options.update) this.root.map(options.update);
+	}
+
+	set(key, value) {
+		this.root.get(key).put(value)
+  }
+}
+
+
 function gunWrapper(options) {
   const gun = Gun([options.gun])
   let root = gun;
   for (const s of options.path.split('/')) {
     if (s) root = root.get(s);
   }
+  options.root = root;
 
   return function(key, writableStore) {
     const { set, subscribe } = writableStore;
@@ -20,6 +38,7 @@ function gunWrapper(options) {
     }
   }
 }
+
 
 Gun.chain.subscribe = function (publish) {
 	var gun = this
@@ -66,6 +85,7 @@ function createMapStore(ref) {
 
 export {
 	Gun,
+	GunBroker,
 	gunWrapper,
 	createMapStore,
 }

@@ -100,7 +100,7 @@
 	<title>Countdown {config.countDown} s</title>
 </svelte:head>
 
-<div class="container" on:click={handleClick}>
+<div class="container" onclick={handleClick}>
 <span class="digital-clock" bind:this={digiClock}>
     {#if isNegative}-{/if}{#if config.showHours}{H}:{/if}{#if M<10}0{/if}{M}{#if config.showSeconds}:{#if S<10}0{/if}{S}{/if}
 </span>
@@ -136,7 +136,7 @@
 </div>
 
 <div class="config" bind:this={configBar}>
-  <label>Time: <select size="1" on:change={changeCountDown}>
+  <label>Time: <select size="1" onchange={changeCountDown}>
     <option value="" selected="selected"></option>
     <option value="30">0:30</option>
     <option value="60">1:00</option>

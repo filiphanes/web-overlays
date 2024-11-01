@@ -3,7 +3,7 @@ export const index = {
   "name": "Evanjelický preklad",
   "copyright": "Tranoscius © Text zverejnený s láskavým dovolením vydavateľstva Tranoscius www.tranoscius.sk.",
   "bibliography": "Podľa vydania Slovenskej evanjelickej cirkvi augsburského vyznania v ČSSR v Spojených biblických spoločnostiach (Londýn) z roku 1979. Reedícia 2015.",
-  "books": [
+  "bookslist": [
     {
       "abbreviation": "gn",
       "abb": "1M",
