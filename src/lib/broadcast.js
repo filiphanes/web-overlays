@@ -10,7 +10,7 @@ export class BroadcastBroker {
 		}
 	}
 	
-	set(key, value) {
+	send(key, value) {
 		this.channel.postMessage({[key]: value})
 	}
 }

@@ -5,7 +5,7 @@
   import { onMount } from "svelte";
   import { page } from "$app/stores";
   import NumberPad from "$lib/NumberPad.svelte";
-  import { MultiBroker } from '$lib/broker.svelte.js';
+  import { multiBrokerState } from '$lib/broker.svelte.js';
   import {index as roh} from "./roh.json.js"
   import {index as seb} from "./seb.json.js"
   import {index as sep} from "./sep.json.js"
@@ -25,50 +25,55 @@
     }
   }
 
-  let defaultAddress = { bible: "roh", book: "gn", chapter: 1, verse: 1, verseCount: 1 };
+  let defaultAddress = { bible: "roh", book: "gn", chapter: 1, verse: 1, vcount: 1 };
   let bookFilter = $state("");
-  let history = $state([defaultAddress,]);
-  let showNextVerses = $state(true);
-  let hideOnSelector = $state(true);
-  let splitButton = $state(false);
+  let history = $state([defaultAddress]);
 
-  /* Synced variables */
-  let address = $state(defaultAddress);
-  let show   = $state(false);
-  let verseNumbers = $state(false);
-  let theme   = $state('');
-  let program = $state({});
-  let bible2  = $state('')
-  /* TODO: sync both ways */
+  /* Synced State */
+  const s = multiBrokerState({
+    show: false,
+    line1: '',
+    line2: '',
+    line3: '',
+    line4: '',
+    bible: 'roh',
+    book: 'gn',
+    chapter: 1,
+    verse: 1,
+    vcount: 1,
+    bible2: '',
+    theme: '',
+    history: [defaultAddress],
+    program: {},
+    verseNumbers: false,
+    showNextVerses: true,
+    hideOnSelector: true,
+    splitButton: false,
+    allinone: "{}",
+  })
+  
+  $effect(()=>{s.line1 = addressAsString(address)});
+  $effect(()=>{s.line2 = addressContent(address, s.verseNumbers)});
+  $effect(()=>{address2; s.line3 = addressAsString(address2)});
+  $effect(()=>{address2; s.line4 = addressContent(address2, s.verseNumbers)});
+  $effect(()=>{s.allinone = JSON.stringify({line1:s.line1, line2:s.line2, line3:s.line3, line4:s.line4, show:s.show})});
 
   /* Derived variables */
-  let address2 = $derived({bible: bible2, book: address.book, chapter: address.chapter, verse: address.verse, verseCount: address.verseCount});
-  let books1 = $derived(bibles[address.bible].books);
-  let line1 = $derived(addressAsString(address));
-  let line2 = $derived(addressContent(address, verseNumbers));
-  let line3 = $derived(address2.bible ? addressAsString(address2) : "");
-  let line4 = $derived(address2.bible ? addressContent(address2, verseNumbers) : "");
-  let bookLength = $derived(Object.keys(bibles[address.bible].books[address.book].chapters||{}).length);
-  let chapterLength = $derived(((bibles[address.bible].books[address.book].chapters||{})[address.chapter]||[]).length);
+  let address = $derived({bible: s.bible, book: s.book, chapter: s.chapter, verse: s.verse, vcount: s.vcount});
+  let address2 = $derived({bible: s.bible2, book: s.book, chapter: s.chapter, verse: s.verse, vcount: s.vcount});
+  let books1 = $derived(bibles[s.bible].books);
+  let bookLength = $derived(Object.keys(bibles[s.bible].books[s.book].chapters||{}).length);
+  let chapterLength = $derived(((bibles[s.bible].books[s.book].chapters||{})[s.chapter]||[]).length);
   let addressNext = $derived(nextVerse({...address}));
   let address2Next = $derived(nextVerse({...address2}));
-  let line2Next = $derived(addressContent(addressNext, verseNumbers));
-  let line4Next = $derived(addressContent(address2Next, verseNumbers));
-  let bookList = $derived(bibles[address.bible].bookslist);
+  let line2Next = $derived(addressContent(addressNext, s.verseNumbers));
+  let line4Next = $derived(addressContent(address2Next, s.verseNumbers));
+  let bookList = $derived(bibles[s.bible].bookslist);
   let filteredBooks = $derived(bookFilter ? bookList.filter(matchesBook) : bookList);
 
-  const broker = new MultiBroker();
-  $effect(()=>broker.set('show', show))
-  $effect(()=>broker.set('line1', line1))
-  $effect(()=>broker.set('line2', line2))
-  $effect(()=>broker.set('line3', line3))
-  $effect(()=>broker.set('line4', line4))
-  $effect(()=>broker.set('theme', theme))
-  $effect(()=>broker.set('program', program))
-  $effect(()=>broker.set('allinone', JSON.stringify({show, line1, line2, line3, line4}))) // TODO: remove
-  
 	onMount(() => {
-    broker.setup({
+    s.mount({
+			gun: 'https://gun.filiphanes.sk/gun',
       space: 'bible',
       password: $page.url.hash.slice(1) || 'demo',
       ...Object.fromEntries($page.url.searchParams)
@@ -105,7 +110,7 @@
       book: a.book,
       chapter: a.chapter,
       verse: a.verse,
-      verseCount: a.verseCount,
+      vcount: a.vcount,
     });
     /* remove earlier duplicates */
     history = history.filter((h, i) => i === 0 || !equalAddresses(h, a));
@@ -118,8 +123,8 @@
     var s = books[a.book].name + ' ' + a.chapter;
     if (a.verse) {
       s += ',' + a.verse;
-      if (a.verseCount > 1) {
-        s += '-' + (a.verse + a.verseCount - 1);
+      if (a.vcount > 1) {
+        s += '-' + (a.verse + a.vcount - 1);
       }
     }
     return s;
@@ -135,7 +140,7 @@
         return content;
       }
       if (a.verse && book.chapters[a.chapter]) {
-        for (var i = a.verse; i < a.verse + a.verseCount; i++) {
+        for (var i = a.verse; i < a.verse + a.vcount; i++) {
           content += `\n`;
           if (numbers) {
             content += `<sup>${i}</sup>`;
@@ -152,20 +157,20 @@
       a.book == b.book &&
       a.chapter == b.chapter &&
       a.verse == b.verse &&
-      a.verseCount == b.verseCount;
+      a.vcount == b.vcount;
   }
 
   function addressSelector(a) {
     return function () {
-      if (hideOnSelector) show = false;
-      fetchChapters(address.bible, a.book).then((chapters) => {
-        bibles[address.bible].books[a.book].chapters = chapters;
-        address.book = a.book;
-        address.chapter = a.chapter || '';
-        address.verse = a.verse || '';
-        address.verseCount = a.verseCount || 1;
+      if (s.hideOnSelector) s.show = false;
+      fetchChapters(s.bible, a.book).then((chapters) => {
+        bibles[s.bible].books[a.book].chapters = chapters;
+        s.book = a.book;
+        s.chapter = a.chapter || '';
+        s.verse = a.verse || '';
+        s.vcount = a.vcount || 1;
       });
-      if (address2.bible && address.bible != address2.bible && !bibles[address2.bible].books[a.book].chapters) {
+      if (address2.bible && s.bible != address2.bible && !bibles[address2.bible].books[a.book].chapters) {
         fetchChapters(address2.bible, a.book).then((chapters) => {
           bibles[address2.bible].books[a.book].chapters = chapters;
         });
@@ -180,18 +185,17 @@
   }
 
   function toggleShown() {
-    show = !show;
-    if (show) {
+    s.show = !s.show;
+    if (s.show) {
       addToHistory(address);
     }
   }
 
   function sendToProgram() {
-    program = { line1, line2, line3, line4 }
   }
 
   function prevVerse(a) {
-    a.verse = +a.verse - a.verseCount;
+    a.verse = +a.verse - a.vcount;
     if (a.verse <= 0) {
       a = prevChapter(a);
       a.verse = books1[a.book].chapters[a.chapter]?.length || 1;
@@ -200,7 +204,7 @@
   };
 
   function nextVerse(a) {
-    a.verse = +a.verse + a.verseCount;
+    a.verse = +a.verse + a.vcount;
     if (a.verse > chapterLength) {
       a = nextChapter(a);
     }
@@ -227,46 +231,49 @@
   };
 
   function prevBook(a) {
-    const books = bibles[address.bible].bookslist;
+    const books = bibles[s.bible].bookslist;
     const newIndex = books1[a.book].index - 1 + books.length;
     a.book = books[newIndex%books.length].abbreviation;
-    console.log('newIndex', newIndex, address.book);
+    console.log('newIndex', newIndex, s.book);
     return a;
   };
 
   function nextBook(a) {
-    const books = bibles[address.bible].bookslist;
+    const books = bibles[s.bible].bookslist;
     const newIndex = books1[a.book].index + 1;
     a.book = books[newIndex%books.length].abbreviation;
     return a;
   };
   
   function gotoPrevVerse() {
-    address.verse = Math.max(1, address.verse-address.verseCount);
+    s.verse = Math.max(1, s.verse-s.vcount);
     // if (program.line1) sendToProgram;
   }
   
   function gotoNextVerse() {
-    address = nextVerse({...address});
-    // address.verse = Math.min(address.verse+address.verseCount, chapterLength);
+    const a = nextVerse({...address});
+    s.book = a.book;
+    s.chapter = a.chapter;
+    s.verse = a.verse;
+    // s.verse = Math.min(s.verse+s.vcount, chapterLength);
     // if (program.line1) sendToProgram;
   }
   function changeBible1(event) {
     const newbible = event.target.value;
-    fetchChapters(newbible, address.book).then((chapters) => {
-      bibles[newbible].books[address.book].chapters = chapters;
-      address.bible = newbible;
+    fetchChapters(newbible, s.book).then((chapters) => {
+      bibles[newbible].books[s.book].chapters = chapters;
+      s.bible = newbible;
     });
   }
   function changeBible2(event) {
     const newbible = event.target.value;
     if (!newbible) {
-      bible2 = newbible;
+      s.bible2 = newbible;
       return;
     }
-    fetchChapters(newbible, address.book).then((chapters) => {
-      bibles[newbible].books[address.book].chapters = chapters;
-      bible2 = newbible;
+    fetchChapters(newbible, s.book).then((chapters) => {
+      bibles[newbible].books[s.book].chapters = chapters;
+      s.bible2 = newbible;
     })
   }
 </script>
@@ -277,49 +284,51 @@
 </div>
 <div class="books-filter">
   {#each filteredBooks as b}
-  <button class="book-item btn" class:btn-primary={b.abbreviation==address.book} onclick={addressSelector({book: b.abbreviation})}>{b.name}</button>
+  <button class="book-item btn" class:btn-primary={b.abbreviation==s.book} onclick={addressSelector({book: b.abbreviation})}>{b.name}</button>
   {/each}
 </div>
 <div class="address-filter">
   {#each history as addr, i}
   <div class="address-item btn-group">
-    <button class="address-set btn" class:btn-primary={equalAddresses(addr, address)} onclick={addressSelector(addr)}>{addressAsString({bible: address.bible, ...addr}) || (addr.book+' '+addr.chapter+','+addr.verse)}</button>
+    <button class="address-set btn" class:btn-primary={equalAddresses(addr, address)} onclick={addressSelector(addr)}>{addressAsString({bible: s.bible, ...addr}) || (addr.book+' '+addr.chapter+','+addr.verse)}</button>
     <button class="btn btn-secondary address-remove" onclick={removeHistory(i)}>×</button>
   </div>
   {/each}
 </div>
 
 <div style="display: inline-block; margin: .5rem; vertical-align: top;">
-  Kapitola: {address.chapter} z {bookLength}
-  <NumberPad bind:value={address.chapter} max={bookLength} />
-  <button class="btn btn-primary" onclick={()=>{address.chapter=Math.max(1,address.chapter-1)}} style="line-height: 2rem;"
-  >⇦</button><button class="btn btn-primary" onclick={()=>{address.chapter=Math.min(address.chapter+1,bookLength)}} style="line-height: 2rem;"
+  Kapitola: {s.chapter} z {bookLength}
+  <NumberPad bind:value={s.chapter} max={bookLength} />
+  <button class="btn btn-primary" onclick={()=>{s.chapter=Math.max(1,s.chapter-1)}} style="line-height: 2rem;"
+  >⇦</button><button class="btn btn-primary" onclick={()=>{s.chapter=Math.min(s.chapter+1,bookLength)}} style="line-height: 2rem;"
   >⇨</button><br/>
-  {#if splitButton}
-    <button class="control-button btn btn-success" style="line-height: 2rem;" onclick={sendToProgram}>Zobraziť</button>
-    <button style="line-height: 2rem;" onclick={()=>{program={}}} class="btn btn-danger">&times;</button>
+  {#if s.splitButton}
+    <button class="control-button btn btn-success" style="line-height: 2rem;"
+      onclick={()=>{ s.program = {line1: s.line1, line2: s.line2, line3: s.line3, line4: s.line4} }}>Zobraziť</button>
+    <button class="btn btn-danger" style="line-height: 2rem;"
+      onclick={()=>{ s.program = {} }}>&times;</button>
   {:else}
-    <button style="line-height: 2rem;" onclick={toggleShown} class="btn control-button" class:btn-danger={show} class:btn-success={!show}
-    >{#if show}Skryť{:else}Zobraziť{/if}</button>
+    <button style="line-height: 2rem;" onclick={toggleShown} class="btn control-button" class:btn-danger={s.show} class:btn-success={!s.show}
+    >{#if s.show}Skryť{:else}Zobraziť{/if}</button>
   {/if}
 </div>
 <div style="display: inline-block; margin: .5rem; vertical-align: top;">
-  Verš: {address.verse} {#if address.verseCount>1} - {address.verse + address.verseCount - 1}{/if} z {chapterLength}
-  <NumberPad bind:value={address.verse} max={chapterLength} />
-  <button class="btn btn-primary" style="line-height: 2rem;" onclick={gotoPrevVerse} disabled={address.verse<=1}
-  >⇦</button><button class="btn btn-primary" style="line-height: 2rem;" onclick={gotoNextVerse} disabled={address.verse+address.verseCount>chapterLength}
+  Verš: {s.verse} {#if s.vcount>1} - {s.verse + s.vcount - 1}{/if} z {chapterLength}
+  <NumberPad bind:value={s.verse} max={chapterLength} />
+  <button class="btn btn-primary" style="line-height: 2rem;" onclick={gotoPrevVerse} disabled={s.verse<=1}
+  >⇦</button><button class="btn btn-primary" style="line-height: 2rem;" onclick={gotoNextVerse} disabled={s.verse+s.vcount>chapterLength}
   >⇨</button><br/><button disabled style="background: transparent;" aria-label="empty"
-  ></button><button class="btn btn-primary" onclick={()=>{address.verseCount -= 1}} style="line-height: 2rem;" disabled={address.verseCount<=1}
-  >-1</button><button class="btn btn-primary" onclick={()=>{address.verseCount += 1}} style="line-height: 2rem;" disabled={address.verseCount>chapterLength}
+  ></button><button class="btn btn-primary" onclick={()=>{s.vcount -= 1}} style="line-height: 2rem;" disabled={s.vcount<=1}
+  >-1</button><button class="btn btn-primary" onclick={()=>{s.vcount += 1}} style="line-height: 2rem;" disabled={s.vcount>chapterLength}
   >+1</button><br/><button disabled style="background: transparent;" aria-label="empty"
   ></button>
 </div>
 
 <div class="preview">
-  {line1}<br/>
-  {@html line2}
+  {s.line1}<br/>
+  {@html s.line2}
 </div>
-{#if showNextVerses}
+{#if s.showNextVerses}
 <div class="preview next">
   {@html line2Next}
 </div>
@@ -327,10 +336,10 @@
 
 {#if address2.bible}
 <div class="preview">
-  {line3}<br/>
-  {@html line4}
+  {s.line3}<br/>
+  {@html s.line4}
 </div>
-{#if showNextVerses}
+{#if s.showNextVerses}
 <div class="preview next">
   {@html line4Next}
 </div>
@@ -341,7 +350,7 @@
 <div class="settings">
   <div class="bible">
     Preklad:
-    <select value={address.bible} onchange={changeBible1}>
+    <select value={s.bible} onchange={changeBible1}>
     {#each Object.entries(bibles) as [id, bible]}
       <option value={id}>{bible.name}</option>
     {/each}
@@ -360,7 +369,7 @@
 
   <div class="theme">
     Téma:
-    <select bind:value={theme}>
+    <select bind:value={s.theme}>
       <option value="" selected>Predvolená</option>
       <option value="simple-with-shadow" selected>Jednoduché s tieňom</option>
       <option value="fullscreen-white-bg">Fullscreen biele pozadie</option>
@@ -369,22 +378,22 @@
 
   <div class="bible">
     <label>
-      <input type="checkbox" bind:checked={verseNumbers} /> Čísla veršov
+      <input type="checkbox" bind:checked={s.verseNumbers} /> Čísla veršov
     </label>
   </div>
   <div class="bible">
     <label>
-      <input type="checkbox" bind:checked={showNextVerses} /> Nasledujúce verše
+      <input type="checkbox" bind:checked={s.showNextVerses} /> Nasledujúce verše
     </label>
   </div>
   <div class="bible">
     <label>
-      <input type="checkbox" bind:checked={hideOnSelector} /> Skryť pri výbere knihy
+      <input type="checkbox" bind:checked={s.hideOnSelector} /> Skryť pri výbere knihy
     </label>
   </div>
   <div class="bible">
     <label>
-      <input type="checkbox" bind:checked={splitButton} /> Texty do programu až po kliknutí
+      <input type="checkbox" bind:checked={s.splitButton} /> Texty do programu až po kliknutí
     </label>
   </div>
 

@@ -64,8 +64,8 @@
 						<small class="form-text text-muted">Team names and Scores are updated automatically on change and show.</small>
 					</div>
 					<div>
-						<button class="btn btn-lg btn-success" on:click={()=>{$show=true}}>Show</button>
-						<button class="btn btn-lg btn-primary" on:click={()=>{$show=false}}>Hide</button>
+						<button class="btn btn-lg btn-success" onclick={()=>{$show=true}}>Show</button>
+						<button class="btn btn-lg btn-primary" onclick={()=>{$show=false}}>Hide</button>
 					</div>
 				</div>
 			</div>
