@@ -3,7 +3,7 @@ import { mqttWrapper } from '$lib/mqtt.js';
 import { websocketWrapper } from '$lib/ws.js';
 
 /* Deprecated: use sync.svelte.js */
-function makeWrapStore(opts) {
+export function makeWrapStore(opts) {
   let wrapStore;
   const options = {
     gun: 'https://gun.filiphanes.sk/gun',
@@ -24,8 +24,4 @@ function makeWrapStore(opts) {
     wrapStore = gunWrapper(options);
   }
   return wrapStore;
-}
-
-export {
-  makeWrapStore,
 }

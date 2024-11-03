@@ -72,8 +72,7 @@
   let filteredBooks = $derived(bookFilter ? bookList.filter(matchesBook) : bookList);
 
 	onMount(() => {
-    s.mount({
-			gun: 'https://gun.filiphanes.sk/gun',
+    s.connect({
       space: 'bible',
       password: $page.url.hash.slice(1) || 'demo',
       ...Object.fromEntries($page.url.searchParams)

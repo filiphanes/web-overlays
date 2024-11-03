@@ -8,7 +8,7 @@ export function multiBrokerState(initObject) {
   const state = $state(initObject);
   const brokers = [];
 
-  function mount(opts) {
+  function connect(opts) {
     const options = {
       gun: 'https://gun.filiphanes.sk/gun',
       mqtt: undefined,
@@ -33,7 +33,7 @@ export function multiBrokerState(initObject) {
     for (const broker of brokers) broker.send(key, value);
   }
 
-  const o = { mount };
+  const o = { connect };
   /* Build getters/setters */
   for (const [key, value] of Object.entries(initObject)) {
     Object.defineProperty(o, key, {
@@ -43,61 +43,4 @@ export function multiBrokerState(initObject) {
     })
   }
   return o;
-}
-
-class MultiBroker {
-  constructor() {
-    this.brokers = [];
-    this.states = {};
-    this.deriveds = {};
-  }
-
-  set(key, val) {
-    for (const broker of this.brokers) {
-      broker.set(key, val);
-    }
-  }
-
-  updateState(key, val) {
-    const state = this.states[key];
-    if (state) state.value = val;
-  }
-
-  state(key, d) {
-    let state = $state(d);
-    this.states[key] = {
-      get value() { return state },
-      set value(newState) { state = newState },
-    };
-    // $effect(() => {set(key, $state.snapshot(state))});
-    return state;
-  }
-
-  derivedby(key, fn) {
-    let state = $derived.by(fn);
-    self.deriveds[key] = {
-      get value() { return state },
-    };
-    // $effect(() => {set(key, $state.snapshot(state))});
-    return state
-  }
-
-  setup(opts) {
-    const options = {
-      gun: 'https://gun.filiphanes.sk/gun',
-      mqtt: undefined,
-      ws: undefined,
-      broadcast: undefined,
-      space: 'default',
-      password: 'demo',
-      path: undefined,
-      // update: this.updateState,
-    };
-    Object.assign(options, opts);
-    options.path = options.path || `${options.space}/${options.password}`;
-    if (options.ws) this.brokers.push(new WebsocketBroker(options));
-    else if (options.mqtt) this.brokers.push(new MqttBroker(options));
-    else if (options.gun) this.brokers.push(new GunBroker(options));
-    else if (options.broadcast) this.brokers.push(new BroadcastBroker(options));
-  }
 }
