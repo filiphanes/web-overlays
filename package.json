@@ -39,13 +39,13 @@
   "devDependencies": {
     "@sveltejs/adapter-auto": "^3.3.1",
     "@sveltejs/adapter-static": "^3.0.6",
-    "@sveltejs/kit": "^2.7.4",
+    "@sveltejs/kit": "^2.8.0",
     "@sveltejs/vite-plugin-svelte": "^4.0.0",
     "smui-theme": "7.0.0",
-    "svelte": "^5.1.9",
+    "svelte": "^5.1.12",
     "svelte-check": "^4.0.5",
     "vite": "^5.4.10",
-    "wrangler": "^3.84.1"
+    "wrangler": "^3.85.0"
   },
   "type": "module",
   "dependencies": {
