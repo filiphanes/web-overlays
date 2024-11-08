@@ -3,10 +3,9 @@
 
 <head>
 	<meta charset="utf-8">
-	<title>Bible overlay</title>
+	<title>Editor overlay</title>
 	<style>
-
-@import url('/fonts/Roboto.css');
+		@import url('/fonts/Roboto.css');
 		@import url('/fonts/OpenSans.css');
 
 		html {
@@ -30,7 +29,7 @@
 			/*! bottom: 6%; */
 			/*! left: 2%; */
 			/*! opacity: 0; */
-			transition: all .9s linear;
+			transition: all .5s linear;
 		}
 
 		#overlay.show {
@@ -119,22 +118,20 @@
 		},
 	};
 
-	function updateBlocks(key, blocks) {
-		const elements = blocks.map((block) => {
-			if (block.tunes?.hide) return "";
-			return transforms[block.type]
-				? transforms[block.type](block)
-				: `<div>Neznamy blok ${block.type}</div>`;
-		});
-		document.getElementById(key).innerHTML = elements.join("");
-	}
-
 	const listeners = {
-		blocks: updateBlocks,
-		show: function (key, val) {
+		blocks: function updateBlocks(key, blocks) {
+			const elements = blocks.map((block) => {
+				if (block.tunes?.hide) return "";
+				return transforms[block.type]
+					? transforms[block.type](block)
+					: `<div>${block.type}?</div>`;
+			});
+			document.getElementById(key).innerHTML = elements.join("");
+		},
+		show: function show(key, val) {
 			document.getElementById('overlay').classList.toggle('show', val);
 		},
-		theme: function (key, val) {
+		theme: function theme(key, val) {
 			document.body.className = val;
 		},
 	};

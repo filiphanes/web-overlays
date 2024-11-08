@@ -10,11 +10,20 @@
   import { multiBrokerState } from "$lib/broker.svelte.js";
   import { HideTune } from "$lib/hidetune.js";
 
+  let timestamp = 0;
   const s = multiBrokerState({
     blocks: {},
-    show: false,
+    show: true,
+    timestamp: 1,
   });
-  $effect(()=>{s.blocks; editor?.render({blocks: s.blocks})});
+
+  $effect(() => {
+    s.blocks;
+    if (editor && s.timestamp != timestamp) {
+      editor.render({blocks: s.blocks});
+      timestamp = s.timestamp;
+    }
+  });
 
   let editor = null;
 
@@ -54,6 +63,9 @@
       },
       tunes: ["hide"],
       autofocus: true,
+      onChange: (api, event) => {
+       save();
+     },
     });
 
     s.connect({
@@ -66,6 +78,7 @@
   function save() {
     editor.save().then((data) => {
       s.blocks = data.blocks;
+      s.timestamp = data.timestamp;
       console.log('blocks: ', data.blocks);
     }).catch((error) => {
       console.log('Saving failed: ', error)
@@ -74,16 +87,24 @@
 </script>
 
 <button onclick={save}>Uložiť</button>
-<button onclick={()=>{s.show=!s.show}} class="btn" class:btn-success={!s.show} class:btn-danger={s.show}>{#if s.show}Skryť{:else}Zobraziť{/if}</button>
 <div id="editorjs"></div>
 
 <style>
-  :global(.hideblock) {
-    opacity: 0.3;
+  :root {
+    /* background color */
+    --main: #111827;
+    /* Toolbar and popover */
+    --primary: #0f172a;
+    /* On hover or selected */
+    --selected: rgba(255, 255, 255, 0.2);
+    /* Border color */
+    --border: #1e293b;
+    /* Text and icon colors */
+    --text: white;
   }
   :global(body) {
-    background: white;
-    color: black;
+    background: black;
+    color: white;
     padding: 0.5rem;
   }
   button {
@@ -106,5 +127,57 @@
 
   button:focus {
     border-color: #666;
+  }
+  
+  :global(
+  .ce-block--selected .ce-block__content,
+  .ce-inline-toolbar,
+  .codex-editor--narrow .ce-toolbox,
+  .ce-conversion-toolbar,
+  .ce-settings,
+  .ce-settings__button,
+  .ce-toolbar__settings-btn,
+  .cdx-button,
+  .ce-popover,
+  .ce-toolbar__plus:hover) {
+    background: #007991;
+    color: inherit;
+  }
+
+  :global(
+  .ce-inline-tool,
+  .ce-conversion-toolbar__label,
+  .ce-toolbox__button,
+  .cdx-settings-button,
+  .ce-toolbar__plus) {
+    color: inherit;
+  }
+
+  :global(::selection) {
+    /* background: #439a86; */
+  }
+  :global(
+  .cdx-settings-button:hover,
+  .ce-settings__button:hover,
+  .ce-toolbox__button--active,
+  .ce-toolbox__button:hover,
+  .cdx-button:hover,
+  .ce-inline-toolbar__dropdown:hover,
+  .ce-inline-tool:hover,
+  .ce-popover__item:hover,
+  .ce-toolbar__settings-btn:hover) {
+    background-color: #439a86;
+    color: inherit;
+  }
+
+  :global(
+  .cdx-notify--error) {
+    background: #fb5d5d !important;
+  }
+
+  :global(
+  .cdx-notify__cross::after,
+  .cdx-notify__cross::before) {
+    background: white;
   }
 </style>
