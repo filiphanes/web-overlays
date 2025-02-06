@@ -56,7 +56,7 @@
   $effect(()=>{s.line2 = addressContent(address, s.verseNumbers)});
   $effect(()=>{address2; s.line3 = addressAsString(address2)});
   $effect(()=>{address2; s.line4 = addressContent(address2, s.verseNumbers)});
-  $effect(()=>{s.allinone = JSON.stringify({line1:s.line1, line2:s.line2, line3:s.line3, line4:s.line4, show:s.show})});
+  $effect(()=>{s.allinone = JSON.stringify(s.program)});
 
   /* Derived variables */
   let address = $derived({bible: s.bible, book: s.book, chapter: s.chapter, verse: s.verse, vcount: s.vcount});
