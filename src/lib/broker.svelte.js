@@ -2,6 +2,7 @@ import { BroadcastBroker } from '$lib/broadcast.js';
 import { GunBroker } from '$lib/gun.js';
 import { MqttBroker } from '$lib/mqtt.js';
 import { WebsocketBroker } from '$lib/ws.js';
+import { LenPutBroker } from '$lib/len.js';
 
 
 export function multiBrokerState(initObject) {
@@ -14,6 +15,7 @@ export function multiBrokerState(initObject) {
       mqtt: undefined,
       ws: undefined,
       broadcast: undefined,
+      len: undefined,
       space: 'demo',
       password: 'demo',
       path: undefined,
@@ -25,6 +27,7 @@ export function multiBrokerState(initObject) {
     options.path = options.path || `${options.space}/${options.password}`;
     if (options.ws) brokers.push(new WebsocketBroker(options));
     else if (options.mqtt) brokers.push(new MqttBroker(options));
+    else if (options.len) brokers.push(new LenPutBroker(options));
     else if (options.gun) brokers.push(new GunBroker(options));
     else if (options.broadcast) brokers.push(new BroadcastBroker(options));
   }
