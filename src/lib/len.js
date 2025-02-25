@@ -29,17 +29,3 @@ export class LenWsBroker {
   }
 }
 
-
-export class LenPutBroker {
-  constructor(options) {
-    this.url = options.len + options.path + "-";
-  }
-
-  send(key, value) {
-    fetch(this.url+key+'.txt', {
-      method: "PUT",
-      headers: {"Content-Type": "text/plain"},
-      body: String(value),
-    })
-  }
-}
