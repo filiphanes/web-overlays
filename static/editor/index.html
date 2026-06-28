@@ -8,19 +8,17 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <title>Editor</title>
 
-<!-- Editor.js core + tools (UMD globals). Classic scripts load & run before the
-     deferred module below, so window.EditorJS / Header / List / ... are ready. -->
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.30.7/dist/editorjs.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.8.8/dist/header.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@1.10.0/dist/list.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@2.7.4/dist/quote.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/table@2.4.3/dist/table.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@2.7.6/dist/embed.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/code@2.9.3/dist/code.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@1.4.2/dist/delimiter.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/simple-image@1.6.0/dist/simple-image.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/raw@2.5.0/dist/raw.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/paragraph@2.11.6/dist/paragraph.umd.js"></script>
+<script src="./vendor/editorjs.umd.js"></script>
+<script src="./vendor/header.umd.js"></script>
+<script src="./vendor/list.umd.js"></script>
+<script src="./vendor/quote.umd.js"></script>
+<script src="./vendor/table.umd.js"></script>
+<script src="./vendor/embed.umd.js"></script>
+<script src="./vendor/code.umd.js"></script>
+<script src="./vendor/delimiter.umd.js"></script>
+<script src="./vendor/simple-image.umd.js"></script>
+<script src="./vendor/raw.umd.js"></script>
+<script src="./vendor/paragraph.umd.js"></script>
 
 <style>
   :root {
@@ -80,6 +78,12 @@
   /* hidden blocks (HideTune) */
   .hideblock { display: none; }
 </style>
+<!-- WEBSOCKET_URL / GUN_SUPER_PEERS globals, used by the controller below.
+     The editor syncs over WebSocket (not Gun): its document is a nested array
+     of Editor.js blocks, which Gun would serialize into unresolvable node
+     refs. server/ws.cjs relays the JSON intact, so controller + overlay-ws.html
+     both connect over ws. -->
+<script src="../js/config.js"></script>
 </head>
 <body>
 <button id="save">Uložiť</button>
@@ -169,7 +173,7 @@ editorPromise.then(() => {
       quote: window.Quote,
       paragraph: window.Paragraph,
       delimiter: window.Delimiter,
-      code: window.Code,
+      code: window.CodeTool,
       embed: window.Embed,
       table: window.Table,
       raw: window.RawTool,
@@ -180,6 +184,7 @@ editorPromise.then(() => {
   });
 
   s.connect({
+    ws: WEBSOCKET_URL,            // pair with overlay-ws.html (ws relays the blocks array cleanly)
     space: "editor",
     password: location.hash.slice(1) || "demo",
     ...Object.fromEntries(new URLSearchParams(location.search)),

@@ -5,7 +5,7 @@
 // Transport precedence (set in connect()): ws > mqtt > put > gun > broadcast.
 // gun + mqtt are loaded on demand from a CDN.
 
-import van from "https://cdn.jsdelivr.net/gh/vanjs-org/van/public/van-1.6.0.min.js";
+import van from "./van-1.6.0.min.js";
 
 const GLOBAL_SOURCES = {
   // local gun first (matches static/js convention), then public CDN fallback
@@ -65,7 +65,7 @@ class GunBroker {
     let root = window.Gun([o.gun]);
     for (const part of o.path.split("/")) if (part) root = root.get(part);
     this.root = root;
-    if (o.update) this.root.map(o.update);
+    if (o.update) this.root.map((data, key) => o.update(key, data));
   }
   send(k, v) { this.root.get(k).put(v); }
 }

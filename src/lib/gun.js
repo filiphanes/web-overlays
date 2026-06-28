@@ -8,7 +8,7 @@ export class GunBroker {
 		for (const s of options.path.split('/')) {
 			if (s) this.root = this.root.get(s);
 		}
-		if (options.update) this.root.map(options.update);
+		if (options.update) this.root.map((data, key) => options.update(key, data));
 	}
 
 	send(key, value) {

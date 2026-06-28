@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no, viewport-fit=cover"/>
+<meta name="HandheldFriendly" content="true" />
+<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<title>Countdown 420 s</title>
+<style>
+  html, body {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    user-select: none;
+  }
+  body {
+    background: black;
+    color: white;
+    margin: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  }
+  .config {
+    display: none;
+    position: absolute;
+    width: 100%;
+    padding: .5rem 0;
+    top: 0;
+    left: 0;
+    color: #999;
+    background: rgba(80, 80, 80, .5);
+    align-items: center;
+    justify-content: space-evenly;
+  }
+  .digital-clock {
+    color: white;
+    font-size: 30vh;
+    font-weight: 100;
+    text-align: center;
+  }
+  .note {
+    font-family: 'Segoe UI', Tahoma, Verdana, sans-serif;
+    font-size: 10vh;
+    color: white;
+    width: 100%;
+    display: block;
+    text-align: center;
+  }
+  svg { max-width: 50vw; max-height: 50vh; }
+  svg .clock-face { stroke: #333; fill: black; }
+  svg .minor  { stroke: #999; stroke-width: 0.5; }
+  svg .major  { stroke: #999; stroke-width: 1; }
+  svg .hour   { stroke: #999; }
+  svg .minute { stroke: #fff; }
+  svg .second, .second-counterweight { stroke: rgb(180,0,0); }
+  svg .second-counterweight { stroke-width: 2; }
+  .container {
+    display: flex;
+    align-items: center;
+    height: 100vh;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+  }
+  input { vertical-align: middle; background-color: #999; border: 0; }
+  label { margin-right: 1rem; }
+</style>
+</head>
+<body>
+<script type="module">
+import { van } from "../js/broker.js";
+
+const S = "http://www.w3.org/2000/svg";
+const svgTags = van.tags(S);
+const { div, span, label, input, select, option, a } = van.tags;
+const { svg, circle, line, g } = svgTags;
+
+/* ---- config (persisted in the URL hash) ---- */
+const cfg = {
+  countDown:              van.state(420),
+  showSeconds:            van.state(true),
+  showHours:              van.state(false),
+  showCircleClock:        van.state(false),
+  digiClockColor:         van.state("#FFFFFF"),
+  digiClockColorNegative: van.state("#FF0000"),
+  digiClockSize:          van.state("50"),
+  circleClockSize:        van.state("50"),
+  note:                   van.state(""),
+};
+const boolKeys = ["showSeconds", "showHours", "showCircleClock"];
+
+// read hash once: #key=value&key=value
+const params = new URLSearchParams(location.hash.slice(1) || "");
+for (const [k, v] of params.entries()) {
+  if (boolKeys.includes(k)) cfg[k].val = v === "1";
+  else if (cfg[k]) cfg[k].val = v;
+}
+
+function updateHash() {
+  const entries = [
+    ["countDown",              String(cfg.countDown.val)],
+    ["showSeconds",            cfg.showSeconds.val ? "1" : ""],
+    ["showHours",              cfg.showHours.val ? "1" : ""],
+    ["showCircleClock",        cfg.showCircleClock.val ? "1" : ""],
+    ["digiClockColor",         cfg.digiClockColor.val],
+    ["digiClockColorNegative", cfg.digiClockColorNegative.val],
+    ["digiClockSize",          cfg.digiClockSize.val],
+    ["circleClockSize",        cfg.circleClockSize.val],
+    ["note",                   cfg.note.val],
+  ];
+  history.replaceState(null, "", "#" + new URLSearchParams(entries).toString());
+}
+// re-write the hash whenever any config field changes
+for (const k of Object.keys(cfg)) van.derive(() => { cfg[k].val; updateHash(); });
+
+/* ---- ticking time (wall clock drives the analog hands) ---- */
+const now = van.state(new Date());
+setInterval(() => { now.val = new Date(); }, 84); // ~12fps, keeps the second hand smooth
+
+const hours   = van.derive(() => now.val.getHours());
+const minutes = van.derive(() => now.val.getMinutes());
+const seconds = van.derive(() => now.val.getSeconds());
+const millis  = van.derive(() => now.val.getMilliseconds());
+
+/* ---- countdown target (resets whenever the duration changes) ---- */
+const countDownTo = van.state(Date.now() + cfg.countDown.val * 1000);
+van.derive(() => {
+  const cd = cfg.countDown.val;
+  countDownTo.val = Date.now() + cd * 1000;
+});
+
+const remainSec  = van.derive(() => Math.floor((countDownTo.val - now.val.getTime()) / 1000));
+const isNegative = van.derive(() => remainSec.val < 0);
+const cdAbs      = van.derive(() => Math.abs(remainSec.val));
+const cdH        = van.derive(() => Math.floor(cdAbs.val / 3600));
+const cdM        = van.derive(() => Math.floor((cdAbs.val % 3600) / 60));
+const cdS        = van.derive(() => cdAbs.val % 60);
+
+van.derive(() => { document.title = `Countdown ${cfg.countDown.val} s`; });
+
+/* ---- digital clock (the countdown itself) ---- */
+const digi = span({ class: "digital-clock" });
+van.derive(() => {
+  let txt = "";
+  if (isNegative.val) txt += "-";
+  if (cfg.showHours.val) txt += `${cdH.val}:`;
+  txt += `${cdM.val < 10 ? "0" : ""}${cdM.val}`;
+  if (cfg.showSeconds.val) txt += `:${cdS.val < 10 ? "0" : ""}${cdS.val}`;
+  digi.textContent = txt;
+});
+van.derive(() => {
+  digi.style.color = isNegative.val ? cfg.digiClockColorNegative.val : cfg.digiClockColor.val;
+});
+van.derive(() => { digi.style.fontSize = `${cfg.digiClockSize.val}vh`; });
+
+/* ---- analog (SVG) clock ---- */
+const clockSvg = svg({ viewBox: "-50 -50 100 100" },
+  circle({ class: "clock-face", r: "48" }),
+  // 12 major markers (every 5 minutes), each with 4 minor ticks
+  [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].flatMap(minute => [
+    line({ class: "major", y1: "35", y2: "45", transform: `rotate(${30 * minute})` }),
+    ...[1, 2, 3, 4].map(off =>
+      line({ class: "minor", y1: "42", y2: "45", transform: `rotate(${6 * (minute + off)})` })),
+  ]),
+  line({ class: "hour",   y1: "2",  y2: "-20", id: "hourHand" }),
+  line({ class: "minute", y1: "4",  y2: "-30", id: "minHand" }),
+  g({ id: "secHand" },
+    line({ class: "second", y1: "10", y2: "-38" }),
+    line({ class: "second-counterweight", y1: "10", y2: "2" })),
+);
+const hourHand = clockSvg.querySelector("#hourHand");
+const minHand  = clockSvg.querySelector("#minHand");
+const secHand  = clockSvg.querySelector("#secHand");
+van.derive(() => { hourHand.setAttribute("transform", `rotate(${30 * hours.val + minutes.val / 2})`); });
+van.derive(() => { minHand.setAttribute("transform",  `rotate(${6 * minutes.val + seconds.val / 10})`); });
+van.derive(() => { secHand.setAttribute("transform",  `rotate(${6 * (seconds.val + millis.val / 1000)})`); });
+van.derive(() => {
+  clockSvg.style.maxWidth  = `${cfg.circleClockSize.val}vw`;
+  clockSvg.style.maxHeight = `${cfg.circleClockSize.val}vh`;
+});
+
+/* ---- note ---- */
+const noteEl = div({ class: "note" });
+van.derive(() => {
+  const n = cfg.note.val.trim();
+  noteEl.textContent = n;
+  noteEl.style.display = n ? "block" : "none";
+});
+
+/* ---- config bar ---- */
+const showConfig = van.state(false);
+const onCheckbox = (key) => (e) => { cfg[key].val = e.target.checked; };
+const onInput    = (key) => (e) => { cfg[key].val = e.target.value; };
+
+const onChangeCountDown = (e) => {
+  const v = e.target.value;
+  if (v !== "") cfg.countDown.val = parseFloat(v);
+  e.target.value = ""; // reset so the same duration can be re-picked
+};
+
+const circleSizeLabel = label({ style: () => cfg.showCircleClock.val ? "" : "display:none;" },
+  "Size:",
+  input({ type: "range", min: "1", max: "100",
+          value: () => cfg.circleClockSize.val, oninput: onInput("circleClockSize") }));
+
+const configBar = div({ class: "config" },
+  label({}, "Time: ",
+    select({ onchange: onChangeCountDown },
+      option({ value: "", selected: true }),
+      option({ value: "30" }, "0:30"),
+      option({ value: "60" }, "1:00"),
+      option({ value: "120" }, "2:00"),
+      option({ value: "180" }, "3:00"),
+      option({ value: "240" }, "4:00"),
+      option({ value: "300" }, "5:00"),
+      option({ value: "360" }, "6:00"),
+      option({ value: "420" }, "7:00"),
+      option({ value: "480" }, "8:00"),
+      option({ value: "540" }, "9:00"),
+      option({ value: "600" }, "10:00"),
+      option({ value: "900" }, "15:00"),
+      option({ value: "1800" }, "30:00"),
+      option({ value: "2700" }, "45:00"),
+      option({ value: "3600" }, "1:00:00"),
+      option({ value: "5400" }, "1:30:00"),
+      option({ value: "7200" }, "2:00:00"))),
+  label({}, "Size: ",
+    input({ type: "range", min: "1", max: "100",
+            value: () => cfg.digiClockSize.val, oninput: onInput("digiClockSize") })),
+  label({}, "Color: ",
+    input({ type: "color", value: () => cfg.digiClockColor.val, oninput: onInput("digiClockColor") })),
+  label({}, "Negative: ",
+    input({ type: "color", value: () => cfg.digiClockColorNegative.val, oninput: onInput("digiClockColorNegative") })),
+  label({}, input({ type: "checkbox", checked: () => cfg.showHours.val, onchange: onCheckbox("showHours") }), "Show hours"),
+  label({}, input({ type: "checkbox", checked: () => cfg.showSeconds.val, onchange: onCheckbox("showSeconds") }), "Show seconds"),
+  label({}, input({ type: "checkbox", checked: () => cfg.showCircleClock.val, onchange: onCheckbox("showCircleClock") }), "Show clock"),
+  // circle-clock size only matters when the circle is shown (toggled via style above)
+  circleSizeLabel,
+  label({}, "Note: ",
+    input({ type: "input", value: () => cfg.note.val, oninput: onInput("note") })),
+  a({ href: "/clock/", style: "color:#ccf" }, "clock"),
+);
+van.derive(() => { configBar.style.display = showConfig.val ? "flex" : "none"; });
+
+/* ---- assemble ---- */
+const container = div({ class: "container", onclick: () => { showConfig.val = !showConfig.val; } });
+van.derive(() => {
+  container.replaceChildren();
+  container.append(digi);
+  if (cfg.showCircleClock.val) container.append(clockSvg);
+  if (cfg.note.val.trim()) container.append(noteEl);
+});
+
+van.add(document.body, container, configBar);
+</script>
+</body>
+</html>
