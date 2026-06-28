@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no, viewport-fit=cover"/>
+<meta name="HandheldFriendly" content="true" />
+<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>Lower Third Controller</title>
+<link rel="stylesheet" href="../css/bootstrap.min.css">
+</head>
+<body>
+<script type="module">
+import { van, multiBrokerState } from "../js/broker.js";
+
+const { div, input, button, h5 } = van.tags;
+
+const s = multiBrokerState({
+  show: false,
+  line1: "Text Line 1",
+  line2: "Text Line 2",
+});
+
+s.connect({
+  space: "lowerthird",
+  password: location.hash.slice(1) || "demo",
+  ...Object.fromEntries(new URLSearchParams(location.search)),
+});
+
+// two-way bind an <input> (text) to a broadcasting state key
+const text = (key, extra) => input({
+  class: "form-control", type: "text", ...extra,
+  value: () => s.states[key].val,
+  oninput: (e) => { s[key] = e.target.value; },
+});
+
+van.add(document.body,
+  div({ class: "container-fluid" },
+    div({ class: "row" },
+      div({ class: "col-md" },
+        div({ class: "card" },
+          div({ class: "card-body" },
+            h5({ class: "card-title" }, "Lower Third control"),
+            div({ class: "form-group" },
+              text("line1", { id: "line1" }),
+              text("line2", { id: "line2" }),
+            ),
+            div({},
+              button({ class: "btn btn-lg btn-success", onclick: () => { s.show = true; } }, "Show"),
+              button({ class: "btn btn-lg btn-primary",  onclick: () => { s.show = false; } }, "Hide"),
+            ),
+          ),
+        ),
+      ),
+    ),
+  ),
+);
+</script>
+</body>
+</html>

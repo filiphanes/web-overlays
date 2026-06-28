@@ -6,16 +6,16 @@
   import { page } from "$app/stores";
   import NumberPad from "$lib/NumberPad.svelte";
   import { multiBrokerState } from '$lib/broker.svelte.js';
-  import {index as roh} from "./roh.json.js"
-  import {index as seb} from "./seb.json.js"
-  import {index as sep} from "./sep.json.js"
-  import {index as ssv} from "./ssv.json.js"
-  import {index as bot} from "./bot.json.js"
-  import {index as csp} from "./csp.json.js"
-  import {index as kjv} from "./kjv.json.js"
-  import {index as nlt} from "./nlt.json.js"
-  import {index as nkjv} from "./nkjv.json.js"
-  import {index as amp} from "./amp.json.js"
+  import {index as roh} from "../roh.json.js"
+  import {index as seb} from "../seb.json.js"
+  import {index as sep} from "../sep.json.js"
+  import {index as ssv} from "../ssv.json.js"
+  import {index as bot} from "../bot.json.js"
+  import {index as csp} from "../csp.json.js"
+  import {index as kjv} from "../kjv.json.js"
+  import {index as nlt} from "../nlt.json.js"
+  import {index as nkjv} from "../nkjv.json.js"
+  import {index as amp} from "../amp.json.js"
 
   const bibles = $state({roh, seb, sep, ssv, bot, csp, kjv, nlt, nkjv, amp});
   /* Set index for each book */

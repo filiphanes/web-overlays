@@ -1,5 +1,5 @@
 {
-  "name": "gun-overlays",
+  "name": "web-overlays",
   "version": "1.0.0",
   "description": "HTML5 overlays controlled via websocket server from controller.html",
   "author": "Filip Hanes <filip@hanes.tech>",

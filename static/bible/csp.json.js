@@ -1,521 +1,404 @@
 export const index = {
-  "identifier": "sep",
-  "name": "Evanjelický preklad",
-  "copyright": "Tranoscius © Text zverejnený s láskavým dovolením vydavateľstva Tranoscius www.tranoscius.sk.",
-  "bibliography": "Podľa vydania Slovenskej evanjelickej cirkvi augsburského vyznania v ČSSR v Spojených biblických spoločnostiach (Londýn) z roku 1979. Reedícia 2015.",
+  "identifier": "csp",
+  "name": "Český studijní překlad",
+  "bibliography": "Český studijní překlad. Nový zákon 1994, celá Bible 2009. Vydal Biblický misijní spolek, Praha.",
+  "copyright": "Český studijní překlad © Biblický misijní spolek, Praha (ceskystudijnipreklad.cz). Text je v tomto úložiku uložen lokálně ve static/bible/csp/; určeno pre osobné štúdium.",
   "bookslist": [
     {
       "abbreviation": "gn",
-      "abb": "1M",
+      "abb": "Gn",
       "name": "Genesis",
-      "aliases": [
-        "Genezis",
-        "1. Mojžišova"
-      ]
+      "aliases": ["1. Mojžišova", "Mojžíš"]
     },
     {
       "abbreviation": "ex",
-      "abb": "2M",
+      "abb": "Ex",
       "name": "Exodus",
-      "aliases": [
-        "2. Mojžišova"
-      ]
+      "aliases": ["2. Mojžišova"]
     },
     {
       "abbreviation": "lv",
-      "abb": "3M",
+      "abb": "Lv",
       "name": "Leviticus",
-      "aliases": [
-        "3. Mojžišova"
-      ]
+      "aliases": ["3. Mojžišova"]
     },
     {
       "abbreviation": "nm",
-      "abb": "4M",
+      "abb": "Nm",
       "name": "Numeri",
-      "aliases": [
-        "4. Mojžišova"
-      ]
+      "aliases": ["4. Mojžišova"]
     },
     {
       "abbreviation": "dt",
-      "abb": "5M",
+      "abb": "Dt",
       "name": "Deuteronomium",
-      "aliases": [
-        "5. Mojžišova"
-      ]
+      "aliases": ["5. Mojžišova"]
     },
     {
       "abbreviation": "joz",
       "abb": "Joz",
       "name": "Jozue",
-      "aliases": [
-        "Józua"
-      ]
+      "aliases": ["Józua"]
     },
     {
       "abbreviation": "sdc",
-      "abb": "Sud",
+      "abb": "Sd",
       "name": "Soudců",
-      "aliases": [
-        "Sudcovia"
-      ]
+      "aliases": ["Sudcovia"]
     },
     {
       "abbreviation": "rut",
-      "abb": "Rut",
+      "abb": "Rt",
       "name": "Rút",
-      "aliases": [
-      ]
+      "aliases": ["Rut"]
     },
     {
       "abbreviation": "1sam",
       "abb": "1S",
-      "name": "1 Samuel",
-      "aliases": [
-        "1. Samuelova"
-      ]
+      "name": "1. Samuelova",
+      "aliases": ["1. Samuelova", "1 Samuel"]
     },
     {
       "abbreviation": "2sam",
       "abb": "2S",
-      "name": "2 Samuel",
-      "aliases": [
-        "2. Samuelova"
-      ]
+      "name": "2. Samuelova",
+      "aliases": ["2. Samuelova", "2 Samuel"]
     },
     {
       "abbreviation": "1krl",
       "abb": "1Kr",
-      "name": "1 Královská",
-      "aliases": [
-        "1. Kráľov"
-      ]
+      "name": "1. Králů",
+      "aliases": ["1. Kráľov", "1 Královská"]
     },
     {
       "abbreviation": "2krl",
       "abb": "2Kr",
-      "name": "2 Královská",
-      "aliases": [
-        "2. Kráľov"
-      ]
+      "name": "2. Králů",
+      "aliases": ["2. Kráľov", "2 Královská"]
     },
     {
       "abbreviation": "1krn",
-      "abb": "1Kron",
-      "name": "1 Letopisů",
-      "aliases": [
-        "1. Kronická"
-      ]
+      "abb": "1Pa",
+      "name": "1. Paralipomenon",
+      "aliases": ["1. Paralipomenom", "1. Kronická", "1 Letopisů"]
     },
     {
       "abbreviation": "2krn",
-      "abb": "2Kron",
-      "name": "2 Letopisů",
-      "aliases": [
-        "2. Kronická"
-      ]
+      "abb": "2Pa",
+      "name": "2. Paralipomenon",
+      "aliases": ["2. Paralipomenom", "2. Kronická", "2 Letopisů"]
     },
     {
       "abbreviation": "ezd",
       "abb": "Ezd",
       "name": "Ezdráš",
-      "aliases": [
-        "Ezdráš"
-      ]
+      "aliases": ["Ezdráš"]
     },
     {
       "abbreviation": "neh",
-      "abb": "Neh",
-      "name": "Nehemiáš",
-      "aliases": [
-      ]
+      "abb": "Ne",
+      "name": "Nehemjáš",
+      "aliases": ["Nehemiáš"]
     },
     {
       "abbreviation": "est",
       "abb": "Est",
       "name": "Ester",
-      "aliases": [
-      ]
+      "aliases": ["Ester"]
     },
     {
       "abbreviation": "job",
-      "abb": "Job",
-      "name": "Job",
-      "aliases": [
-      ]
+      "abb": "Jb",
+      "name": "Jób",
+      "aliases": ["Job"]
     },
     {
       "abbreviation": "z",
       "abb": "Ž",
       "name": "Žalmy",
-      "aliases": [
-      ]
+      "aliases": ["Žalm", "Žalmov"]
     },
     {
       "abbreviation": "pris",
-      "abb": "Pr",
+      "abb": "Př",
       "name": "Přísloví",
-      "aliases": [
-        "Príslovia"
-      ]
+      "aliases": ["Príslovia"]
     },
     {
       "abbreviation": "koh",
       "abb": "Kaz",
       "name": "Kazatel",
-      "aliases": [
-        "Kohelet",
-        "Kazateľ"
-      ]
+      "aliases": ["Kohelet", "Kazateľ"]
     },
     {
       "abbreviation": "vlp",
-      "abb": "Veľp",
-      "name": "Píseň",
-      "aliases": [
-        "Pieseň Šalamúnova",
-        "Veľpieseň"
-      ]
+      "abb": "Pp",
+      "name": "Píseň písní",
+      "aliases": ["Pieseň Šalamúnova", "Veľpieseň"]
     },
     {
       "abbreviation": "iz",
       "abb": "Iz",
-      "name": "Izaiáš",
-      "aliases": [
-      ]
+      "name": "Izajáš",
+      "aliases": ["Izaiáš"]
     },
     {
       "abbreviation": "jer",
-      "abb": "Jer",
-      "name": "Jeremiáš",
-      "aliases": [
-      ]
+      "abb": "Jr",
+      "name": "Jeremjáš",
+      "aliases": ["Jeremiáš"]
     },
     {
       "abbreviation": "nar",
-      "abb": "Žalosp",
+      "abb": "Pl",
       "name": "Pláč",
-      "aliases": [
-        "Plač Jeremiášov",
-        "Žalospevy"
-      ]
+      "aliases": ["Plač Jeremiášov", "Pláč Jeremjášův", "Žalospevy"]
     },
     {
       "abbreviation": "ez",
       "abb": "Ez",
       "name": "Ezechiel",
-      "aliases": [
-      ]
+      "aliases": ["Ezechiel"]
     },
     {
       "abbreviation": "dan",
-      "abb": "Dan",
+      "abb": "Da",
       "name": "Daniel",
-      "aliases": [
-      ]
+      "aliases": ["Daniel"]
     },
     {
       "abbreviation": "oz",
       "abb": "Oz",
       "name": "Ozeáš",
-      "aliases": [
-      ]
+      "aliases": ["Hozeáš"]
     },
     {
       "abbreviation": "joel",
-      "abb": "Joel",
+      "abb": "Jl",
       "name": "Joel",
-      "aliases": [
-      ]
+      "aliases": ["Joel"]
     },
     {
       "abbreviation": "am",
       "abb": "Am",
-      "name": "Amos",
-      "aliases": [
-        "Ámos"
-      ]
+      "name": "Ámos",
+      "aliases": ["Ámos"]
     },
     {
       "abbreviation": "abd",
-      "abb": "Abd",
-      "name": "Abdiáš",
-      "aliases": [
-      ]
+      "abb": "Ab",
+      "name": "Obadiáš",
+      "aliases": ["Abdiáš"]
     },
     {
       "abbreviation": "jon",
       "abb": "Jon",
       "name": "Jonáš",
-      "aliases": [
-      ]
+      "aliases": ["Jonáš"]
     },
     {
       "abbreviation": "mich",
-      "abb": "Mich",
+      "abb": "Mi",
       "name": "Micheáš",
-      "aliases": [
-      ]
+      "aliases": ["Micheáš"]
     },
     {
       "abbreviation": "nah",
-      "abb": "Nah",
+      "abb": "Na",
       "name": "Nahum",
-      "aliases": [
-      ]
+      "aliases": ["Náhum"]
     },
     {
       "abbreviation": "hab",
-      "abb": "Ab",
-      "name": "Abakuk",
-      "aliases": [
-      ]
+      "abb": "Hab",
+      "name": "Habakuk",
+      "aliases": ["Habakuk"]
     },
     {
       "abbreviation": "sof",
-      "abb": "Sof",
-      "name": "Sofoniáš",
-      "aliases": [
-      ]
+      "abb": "So",
+      "name": "Sofonjáš",
+      "aliases": ["Sofoniáš"]
     },
     {
       "abbreviation": "ag",
       "abb": "Ag",
-      "name": "Ageus",
-      "aliases": [
-        "Haggeus",
-        "Aggeus"
-      ]
+      "name": "Aggeus",
+      "aliases": ["Haggeus"]
     },
     {
       "abbreviation": "zach",
-      "abb": "Zach",
-      "name": "Zachariáš",
-      "aliases": [
-      ]
+      "abb": "Za",
+      "name": "Zacharjáš",
+      "aliases": ["Zachariáš"]
     },
     {
       "abbreviation": "mal",
       "abb": "Mal",
-      "name": "Malachiáš",
-      "aliases": [
-      ]
+      "name": "Malachjáš",
+      "aliases": ["Malachiáš"]
     },
     {
       "abbreviation": "mt",
       "abb": "Mt",
       "name": "Matouš",
-      "aliases": [
-        "Evanjelium podľa Matúša",
-        "Matúš"
-      ]
+      "aliases": ["Matúš", "Matteo"]
     },
     {
       "abbreviation": "mk",
       "abb": "Mk",
       "name": "Marek",
-      "aliases": [
-        "Evanjelium podľa Mareka",
-        "Mark"
-      ]
+      "aliases": ["Marek"]
     },
     {
       "abbreviation": "lk",
-      "abb": "L",
+      "abb": "Lk",
       "name": "Lukáš",
-      "aliases": [
-        "Evanjelium podľa Lukáša",
-      ]
+      "aliases": ["Lukáš"]
     },
     {
       "abbreviation": "jn",
       "abb": "J",
       "name": "Jan",
-      "aliases": [
-        "Evanjelium podľa Jána",
-        "Ján"
-      ]
+      "aliases": ["Ján"]
     },
     {
       "abbreviation": "sk",
       "abb": "Sk",
-      "name": "Skutky",
-      "aliases": [
-        "Skutky apoštolov",
-      ]
+      "name": "Skutky apoštolů",
+      "aliases": ["Skutky apoštolov"]
     },
     {
       "abbreviation": "rim",
-      "abb": "R",
+      "abb": "Ř",
       "name": "Římanům",
-      "aliases": [
-        "Rímskym"
-      ]
+      "aliases": ["Rimanom"]
     },
     {
       "abbreviation": "1kor",
       "abb": "1K",
-      "name": "1 Korintským",
-      "aliases": [
-      ]
+      "name": "1. Korintským",
+      "aliases": ["1. Korinťanom", "1 Korintským"]
     },
     {
       "abbreviation": "2kor",
       "abb": "2K",
-      "name": "2 Korintským",
-      "aliases": [
-      ]
+      "name": "2. Korintským",
+      "aliases": ["2. Korinťanom", "2 Korintským"]
     },
     {
       "abbreviation": "ga",
-      "abb": "G",
-      "name": "Galatským",
-      "aliases": [
-      ]
+      "abb": "Ga",
+      "name": "Galaťanům",
+      "aliases": ["Galaťanom", "Galaťanům"]
     },
     {
       "abbreviation": "ef",
       "abb": "Ef",
-      "name": "Efeským",
-      "aliases": [
-        "Efezským"
-      ]
+      "name": "Efezským",
+      "aliases": ["Efežanom"]
     },
     {
       "abbreviation": "flp",
-      "abb": "F",
+      "abb": "Fp",
       "name": "Filipským",
-      "aliases": [
-      ]
+      "aliases": ["Filipänom"]
     },
     {
       "abbreviation": "kol",
-      "abb": "Kol",
+      "abb": "Ko",
       "name": "Koloským",
-      "aliases": [
-        "Kolosenským"
-      ]
+      "aliases": ["Kološanom"]
     },
     {
       "abbreviation": "1tes",
-      "abb": "1Tes",
-      "name": "1 Tesalonickým",
-      "aliases": [
-      ]
+      "abb": "1Te",
+      "name": "1. Tesalonickým",
+      "aliases": ["1. Tesaloničanom"]
     },
     {
       "abbreviation": "2tes",
-      "abb": "2Tes",
-      "name": "2 Tesalonickým",
-      "aliases": [
-      ]
+      "abb": "2Te",
+      "name": "2. Tesalonickým",
+      "aliases": ["2. Tesaloničanom"]
     },
     {
       "abbreviation": "1tim",
-      "abb": "1Tim",
-      "name": "1 Timoteus",
-      "aliases": [
-        "1. Timoteovi"
-      ]
+      "abb": "1Tm",
+      "name": "1. Timoteovi",
+      "aliases": ["1. Timoteovi"]
     },
     {
       "abbreviation": "2tim",
-      "abb": "2Tim",
-      "name": "2 Timoteus",
-      "aliases": [
-        "2. Timoteovi"
-      ]
+      "abb": "2Tm",
+      "name": "2. Timoteovi",
+      "aliases": ["2. Timoteovi"]
     },
     {
       "abbreviation": "tit",
-      "abb": "Tit",
-      "name": "Titus",
-      "aliases": [
-        "Títovi"
-      ]
+      "abb": "Ti",
+      "name": "Titovi",
+      "aliases": ["Títovi"]
     },
     {
       "abbreviation": "flm",
-      "abb": "Filem",
-      "name": "Filemon",
-      "aliases": [
-        "Filemonovi"
-      ]
+      "abb": "Fm",
+      "name": "Filemonovi",
+      "aliases": ["Filémonovi"]
     },
     {
       "abbreviation": "heb",
-      "abb": "Žid",
+      "abb": "Žd",
       "name": "Židům",
-      "aliases": [
-        "Židom",
-        "Židom"
-      ]
+      "aliases": ["Hebrejom", "Hebrejským"]
     },
     {
       "abbreviation": "jk",
       "abb": "Jk",
-      "name": "Jakub",
-      "aliases": [
-        "Jakubov list",
-      ]
+      "name": "Jakubův",
+      "aliases": ["Jakub", "Jakubov"]
     },
     {
       "abbreviation": "1pt",
-      "abb": "1Pt",
-      "name": "1 Petr",
-      "aliases": [
-        "1. Petrov"
-      ]
+      "abb": "1P",
+      "name": "1. Petrova",
+      "aliases": ["1. Petrov", "1 Petrova"]
     },
     {
       "abbreviation": "2pt",
-      "abb": "2Pt",
-      "name": "2 Petr",
-      "aliases": [
-        "2. Petrov"
-      ]
+      "abb": "2P",
+      "name": "2. Petrova",
+      "aliases": ["2. Petrov", "2 Petrova"]
     },
     {
       "abbreviation": "1jn",
       "abb": "1J",
-      "name": "1 Jan",
-      "aliases": [
-        "1. Jánov"
-      ]
+      "name": "1. Janova",
+      "aliases": ["1. Ján", "1 Janova"]
     },
     {
       "abbreviation": "2jn",
       "abb": "2J",
-      "name": "2 Jan",
-      "aliases": [
-        "2. Jánov"
-      ]
+      "name": "2. Janova",
+      "aliases": ["2. Ján", "2 Janova"]
     },
     {
       "abbreviation": "3jn",
       "abb": "3J",
-      "name": "3 Jan",
-      "aliases": [
-        "3. Jánov"
-      ]
+      "name": "3. Janova",
+      "aliases": ["3. Ján", "3 Janova"]
     },
     {
       "abbreviation": "jud",
-      "abb": "Jud",
-      "name": "Juda",
-      "aliases": [
-        "Júdov list",
-        "Júdov"
-      ]
+      "abb": "Ju",
+      "name": "Judova",
+      "aliases": ["Júda", "Judáš"]
     },
     {
       "abbreviation": "zj",
-      "abb": "Zjav",
+      "abb": "Zj",
       "name": "Zjevení",
-      "aliases": [
-        "Zjavenie Jána"
-      ]
+      "aliases": ["Zjavenie Jána", "Apokalypsa"]
     }
   ]
 };

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no, viewport-fit=cover"/>
+<meta name="HandheldFriendly" content="true" />
+<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>Scoreboard Controller</title>
+<link rel="stylesheet" href="../css/bootstrap.min.css">
+<style>
+  html, body { background: #222222; }
+  input[type="number"] { width: 3rem; }
+</style>
+</head>
+<body>
+<script type="module">
+import { van, multiBrokerState } from "../js/broker.js";
+
+const { div, span, input, button, label, h5, p, small, a } = van.tags;
+
+const s = multiBrokerState({
+  show: false,
+  team1: "Team 1",
+  team2: "Team 2",
+  score1: "Score 1",
+  score2: "Score 2",
+});
+
+s.connect({
+  space: "scoreboard",
+  password: location.hash.slice(1) || "demo",
+  ...Object.fromEntries(new URLSearchParams(location.search)),
+});
+
+// text input bound to a broadcasting state key
+const textIn = (key, id, placeholder) => input({
+  class: "form-control", type: "text", id, placeholder,
+  value: () => s.states[key].val,
+  oninput: (e) => { s[key] = e.target.value; },
+});
+// number input bound to a broadcasting state key
+const numIn = (key, id) => input({
+  class: "form-control", type: "number", id,
+  value: () => s.states[key].val,
+  oninput: (e) => { s[key] = e.target.value; },
+});
+
+van.add(document.body,
+  div({ class: "container-fluid my-3" },
+    div({ class: "row" },
+      div({ class: "col-md" },
+        div({ class: "card" },
+          div({ class: "card-body" },
+            h5({ class: "card-title" }, "Scoreboard control"),
+            div({ class: "form-row" },
+              div({ class: "form-group col-md-6" },
+                label({ for: "team1" }, "Team 1:"),
+                textIn("team1", "team1", "Team 1 Name")),
+              div({ class: "form-group col-md-6" },
+                label({ for: "team2" }, "Team 2:"),
+                textIn("team2", "team2", "Team 2 Name")),
+            ),
+            div({ class: "form-group" },
+              p({}, "Score:"),
+              div({ class: "input-group mb-3" },
+                numIn("score1", "score1"),
+                span({ class: "form-control input-group-text col-1" }, "-"),
+                numIn("score2", "score2"),
+              ),
+              small({ class: "form-text text-muted" },
+                "Team names and Scores are updated automatically on change and show."),
+            ),
+            div({},
+              button({ class: "btn btn-lg btn-success", onclick: () => { s.show = true; } }, "Show"),
+              button({ class: "btn btn-lg btn-primary",  onclick: () => { s.show = false; } }, "Hide"),
+            ),
+          ),
+        ),
+      ),
+    ),
+    small({ class: "text-muted" },
+      "The scoreboard animation in this example was made by ",
+      a({ href: "http://glowdragon.de", target: "_blank" }, "glowdragon.de")),
+  ),
+);
+</script>
+</body>
+</html>

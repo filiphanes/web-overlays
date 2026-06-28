@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no, viewport-fit=cover"/>
+<meta name="HandheldFriendly" content="true" />
+<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+<meta name="mobile-web-app-capable" content="yes" />
+<title>Editor</title>
+
+<!-- Editor.js core + tools (UMD globals). Classic scripts load & run before the
+     deferred module below, so window.EditorJS / Header / List / ... are ready. -->
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.30.7/dist/editorjs.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.8.8/dist/header.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@1.10.0/dist/list.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@2.7.4/dist/quote.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/table@2.4.3/dist/table.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@2.7.6/dist/embed.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/code@2.9.3/dist/code.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@1.4.2/dist/delimiter.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/simple-image@1.6.0/dist/simple-image.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/raw@2.5.0/dist/raw.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/paragraph@2.11.6/dist/paragraph.umd.js"></script>
+
+<style>
+  :root {
+    --main: #111827;          /* background color */
+    --primary: #0f172a;        /* Toolbar and popover */
+    --selected: rgba(255, 255, 255, 0.2); /* On hover or selected */
+    --border: #1e293b;         /* Border color */
+    --text: white;             /* Text and icon colors */
+  }
+  body { background: black; color: white; padding: 0.5rem; }
+  button {
+    color: whitesmoke;
+    background-color: #555;
+    font-size: 1rem;
+    outline: none;
+    margin: 0 0 0.5rem;
+    line-height: 2rem;
+    border: 1px solid black;
+    border-radius: 0.5rem;
+    user-select: none;
+    padding: 0.3rem 0.7rem;
+  }
+  button:active { background-color: #ddd; color: black; }
+  button:focus  { border-color: #666; }
+
+  .ce-block--selected .ce-block__content,
+  .ce-inline-toolbar,
+  .codex-editor--narrow .ce-toolbox,
+  .ce-conversion-toolbar,
+  .ce-settings,
+  .ce-settings__button,
+  .ce-toolbar__settings-btn,
+  .cdx-button,
+  .ce-popover,
+  .ce-toolbar__plus:hover { background: #007991; color: inherit; }
+
+  .ce-inline-tool,
+  .ce-conversion-toolbar__label,
+  .ce-toolbox__button,
+  .cdx-settings-button,
+  .ce-toolbar__plus { color: inherit; }
+
+  .cdx-settings-button:hover,
+  .ce-settings__button:hover,
+  .ce-toolbox__button--active,
+  .ce-toolbox__button:hover,
+  .cdx-button:hover,
+  .ce-inline-toolbar__dropdown:hover,
+  .ce-inline-tool:hover,
+  .ce-popover__item:hover,
+  .ce-toolbar__settings-btn:hover { background-color: #439a86; color: inherit; }
+
+  .cdx-notify--error { background: #fb5d5d !important; }
+  .cdx-notify__cross::after,
+  .cdx-notify__cross::before { background: white; }
+
+  /* hidden blocks (HideTune) */
+  .hideblock { display: none; }
+</style>
+</head>
+<body>
+<button id="save">Uložiť</button>
+<div id="editorjs"></div>
+
+<script type="module">
+import { van, multiBrokerState } from "../js/broker.js";
+
+const { button } = van.tags;
+
+/* ---- HideTune (ported from src/lib/hidetune.js) ---- */
+class HideTune {
+  constructor({ api, data, block }) {
+    this.api = api; this.block = block; this.data = data || false;
+  }
+  static get isTune() { return true; }
+  render() {
+    return {
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="#000000"><path d="m637-425-62-62q4-38-23-65.5T487-576l-62-62q13-5 27-7.5t28-2.5q70 0 119 49t49 119q0 14-2.5 28t-8.5 27Zm133 133-52-52q36-28 65.5-61.5T833-480q-49-101-144.5-158.5T480-696q-26 0-51 3t-49 10l-58-58q38-15 77.5-21t80.5-6q143 0 261.5 77.5T912-480q-22 57-58.5 103.5T770-292Zm-2 202L638-220q-38 14-77.5 21t-80.5 7q-143 0-261.5-77.5T48-480q22-57 58-104t84-85L90-769l51-51 678 679-51 51ZM241-617q-35 28-65 61.5T127-480q49 101 144.5 158.5T480-264q26 0 51-3.5t50-9.5l-45-45q-14 5-28 7.5t-28 2.5q-70 0-119-49t-49-119q0-14 3.5-28t6.5-28l-81-81Zm287 89Zm-96 96Z"/></svg>',
+      label: this.data ? "Show" : "Hide",
+      onActivate: () => {
+        this.data = !this.data;
+        this.block.holder.classList.toggle("hideblock", this.data);
+      },
+    };
+  }
+  save() { return this.data; }
+  wrap(blockContent) {
+    blockContent.classList.toggle("hideblock", this.data);
+    return blockContent;
+  }
+}
+
+/* ---- synced state ---- */
+const s = multiBrokerState({
+  blocks: {},
+  show: true,
+  timestamp: 1,
+});
+
+let editor = null;
+let localTs = 0;
+
+// when blocks/timestamp arrive from the network, re-render the editor
+// (but not in response to our own save — guarded by localTs)
+van.derive(() => {
+  const blocks = s.blocks;
+  const ts = s.timestamp;
+  if (editor && ts !== localTs) {
+    editor.render({ blocks: blocks || [] });
+    localTs = ts;
+  }
+});
+
+function save() {
+  editor.save().then((data) => {
+    const ts = data.time ?? Date.now();
+    s.blocks = data.blocks;
+    s.timestamp = ts;
+    localTs = ts;          // our own save — don't re-render the editor from it
+    console.log("blocks: ", data.blocks);
+  }).catch((error) => {
+    console.log("Saving failed: ", error);
+  });
+}
+
+document.getElementById("save").onclick = save;
+
+/* ---- bootstrap Editor.js ---- */
+const editorPromise = new Promise((resolve) => {
+  // the UMD <script>s above have already run; globals are present now
+  resolve();
+});
+
+editorPromise.then(() => {
+  editor = new window.EditorJS({
+    holder: "editorjs",
+    autofocus: true,
+    tools: {
+      header: {
+        class: window.Header,
+        inlineToolbar: true,
+        config: { placeholder: "Nadpis", levels: [1, 2, 3, 4], defaultLevel: 2 },
+      },
+      image: window.SimpleImage,
+      list: window.List,
+      quote: window.Quote,
+      paragraph: window.Paragraph,
+      delimiter: window.Delimiter,
+      code: window.Code,
+      embed: window.Embed,
+      table: window.Table,
+      raw: window.RawTool,
+      hide: HideTune,
+    },
+    tunes: ["hide"],
+    onChange: () => save(),
+  });
+
+  s.connect({
+    space: "editor",
+    password: location.hash.slice(1) || "demo",
+    ...Object.fromEntries(new URLSearchParams(location.search)),
+  });
+});
+</script>
+</body>
+</html>

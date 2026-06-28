@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, shrink-to-fit=no, viewport-fit=cover"/>
+<meta name="HandheldFriendly" content="true" />
+<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-touch-fullscreen" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>Biblia ovládač</title>
+
+<style>
+html, body {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+}
+body {
+  background: black;
+  color: white;
+  margin: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+a { color: lightblue; }
+
+/* ---- form controls ---- */
+input, button, select {
+  font-family: inherit;
+  font-size: inherit;
+  padding: 0.4em;
+  margin: 0 0 0.25em 0;
+  box-sizing: border-box;
+  border: none;
+  background: #555;
+  color: whitesmoke;
+  border-radius: .5rem;
+}
+input:disabled { color: #ccc; }
+button {
+  color: whitesmoke;
+  background-color: #555;
+  font-size: 1rem;
+  outline: none;
+  margin: 0;
+  line-height: 2rem;
+  width: 3rem;
+  border: 1px solid black;
+  border-radius: .5rem;
+  user-select: none;
+}
+button:active { background-color: #ddd; color: black; }
+button:focus { border-color: #666; }
+.control-button { width: 6rem; }
+.spacer { background: transparent; }
+
+/* ---- book filter + history lists ---- */
+.input-group { width: 100%; display: flex; }
+.input-group input { flex-grow: 1; }
+.input-group .clear { max-width: 2rem; }
+
+.books-filter,
+.address-filter {
+  display: block;
+  width: 49%;
+  margin: 0 1% 1rem 0;
+  padding: 0;
+  height: 10rem;
+  overflow: scroll;
+  float: left;
+  max-width: 15rem;
+}
+.book-item,
+.address-set,
+.address-remove {
+  width: 100%;
+  margin: 0 0 .1rem;
+  padding: .3rem;
+  text-align: left;
+  color: whitesmoke;
+  border-radius: 0;
+  background: black;
+}
+.address-item {
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  max-width: 30rem;
+  display: flex;
+}
+.address-set    { width: auto; padding: .5rem; margin: 0; text-align: left; flex-grow: 2; }
+.address-remove { margin: 0; max-width: 2rem; padding: .25rem .5rem; line-height: 1rem; }
+
+/* ---- chapter / verse control blocks ---- */
+.control-block { display: inline-block; margin: .5rem; vertical-align: top; }
+
+/* ---- previews ---- */
+.preview { padding: .5rem; user-select: text; }
+.preview.next { color: #777; }
+
+.btn-success { background-color: green; }
+.btn-danger  { background-color: red; }
+
+.settings { padding: .5rem; }
+
+/* ---- reactive fragment (display: contents) ---- */
+.live { display: contents; }
+
+/* ---- number pad ---- */
+.numberpad {
+  display: grid;
+  grid-template-columns: repeat(3, 3rem);
+  grid-template-rows: repeat(4, 3rem);
+  grid-gap: 0;
+  margin: 0 0 0.5rem 0;
+}
+.numberpad button { background-color: transparent; border: none; }
+.numberpad button:active { background-color: #ccc; }
+.numberpad button:hover,
+.numberpad button:focus { background-color: #333; }
+</style>
+
+<script type="module">
+import { van, multiBrokerState } from "../js/broker.js";
+
+/* ═══════════════════════ Bible indexes ═══════════════════════ */
+import { index as roh }  from "./roh.json.js";
+import { index as seb }  from "./seb.json.js";
+import { index as sep }  from "./sep.json.js";
+import { index as ssv }  from "./ssv.json.js";
+import { index as bot }  from "./bot.json.js";
+import { index as csp }  from "./csp.json.js";
+import { index as kjv }  from "./kjv.json.js";
+import { index as nlt }  from "./nlt.json.js";
+import { index as nkjv } from "./nkjv.json.js";
+import { index as amp }  from "./amp.json.js";
+
+const { div, span, input, button, select, option, label, br } = van.tags;
+
+/* ═══════════════════════ Bible data ═══════════════════════ */
+const bibles = {};
+for (const [id, bible] of Object.entries({ roh, seb, sep, ssv, bot, csp, kjv, nlt, nkjv, amp })) {
+  bibles[id] = { ...bible };
+  bibles[id].books = {};
+  let i = 0;
+  for (const book of bibles[id].bookslist) {
+    book.index = i++;
+    bibles[id].books[book.abbreviation] = book;
+  }
+}
+// Option *specs* (plain data) so every <select> builds its own fresh <option> nodes.
+// (Sharing DOM <option> nodes between selects would empty the first one, because a
+// node can only live in one place — appending it elsewhere moves it.)
+const bibleOptionSpecs = Object.entries(bibles).map(([id, bible]) => ({ value: id, label: bible.name }));
+
+/* ═══════════════════════ Chapter loading ═══════════════════════
+   Static bibles = one file per book (loaded whole); API bibles fetch a single
+   chapter from bolls.life. Results are written into the mutable bible tree and
+   dataVersion is bumped so any derive reading chapter data re-evaluates
+   (VanJS has no deep reactivity on plain objects, unlike Svelte's $state). */
+
+const dataVersion = van.state(0);
+const inflight = new Map();
+const CACHE_PREFIX = "bible-chapter:";
+const CACHE_VERSION = 1;
+
+const cacheKey   = (b, a, c) => `${CACHE_PREFIX}${CACHE_VERSION}:${b}:${a}:${c}`;
+const readCache  = (b, a, c) => { try { return JSON.parse(localStorage.getItem(cacheKey(b, a, c)) || "null"); } catch { return null; } };
+const writeCache = (b, a, c, v) => { try { localStorage.setItem(cacheKey(b, a, c), JSON.stringify(v)); } catch { /* quota */ } };
+
+async function ensureChapter(bibleid, abbreviation, chapter) {
+  if (!bibleid || !abbreviation || !chapter) return;
+  const book = bibles[bibleid]?.books?.[abbreviation];
+  if (!book || book.chapters?.[chapter]) return;
+  const key = `${bibleid}:${abbreviation}:${chapter}`;
+  if (inflight.has(key)) return inflight.get(key);
+  const p = (async () => {
+    try {
+      let verses = readCache(bibleid, abbreviation, chapter);
+      if (!verses) {
+        if (bibles[bibleid].api) {
+          verses = await fetchChapterFromApi(bibles[bibleid].api, book, chapter);
+          writeCache(bibleid, abbreviation, chapter, verses);
+        } else {
+          // static: one local file holds the whole book — fill every chapter
+          const all = await fetchStaticBook(bibleid, abbreviation);
+          book.chapters ??= {};
+          for (const ch of Object.keys(all)) book.chapters[ch] = all[ch];
+          dataVersion.val++;
+          return;
+        }
+      }
+      book.chapters ??= {};
+      book.chapters[chapter] = verses;
+      dataVersion.val++;
+    } finally {
+      inflight.delete(key);
+    }
+  })();
+  inflight.set(key, p);
+  return p;
+}
+
+async function fetchStaticBook(bibleid, abbreviation) {
+  const res = await fetch(`/bible/${bibleid}/${abbreviation}.json`);
+  return res.json();
+}
+
+async function fetchChapterFromApi(api, book, chapter) {
+  // bolls.life: GET /get-text/{translation}/{bookNumber}/{chapter}/ -> [{verse, text}, ...]
+  const res = await fetch(`${api.base}/get-text/${api.translation}/${book.index + 1}/${chapter}/`);
+  const verses = await res.json();
+  const arr = [];
+  for (const v of verses) {
+    const n = (v.verse || 1) - 1;
+    arr[n] = (arr[n] ? arr[n] + " " : "") + v.text;
+  }
+  return arr;
+}
+
+/* ═══════════════════════ State ═══════════════════════ */
+const defaultAddress = { bible: "roh", book: "gn", chapter: 1, verse: 1, vcount: 1 };
+
+const s = multiBrokerState({
+  show: false,
+  line1: "", line2: "", line3: "", line4: "",
+  bible: "roh", book: "gn", chapter: 1, verse: 1, vcount: 1,
+  bible2: "", theme: "",
+  history: [defaultAddress],
+  program: {},
+  verseNumbers: false,
+  showNextVerses: true,
+  hideOnSelector: true,
+  splitButton: false,
+});
+
+const history = van.state([defaultAddress]);   // local UI history (not broadcast)
+const bookFilter = van.state("");
+
+/* ═══════════════════════ Derived state ═══════════════════════ */
+const address  = van.derive(() => ({ bible: s.bible,  book: s.book, chapter: s.chapter, verse: s.verse, vcount: s.vcount }));
+const address2 = van.derive(() => ({ bible: s.bible2, book: s.book, chapter: s.chapter, verse: s.verse, vcount: s.vcount }));
+
+const books1        = van.derive(() => bibles[s.bible]?.books || {});
+const bookList      = van.derive(() => bibles[s.bible]?.bookslist || []);
+const bookLength    = van.derive(() => { dataVersion.val; const b = books1.val[s.book]; return b?.chapterCount || Object.keys(b?.chapters || {}).length; });
+const chapterLength = van.derive(() => { dataVersion.val; const b = books1.val[s.book]; return ((b?.chapters || {})[s.chapter] || []).length; });
+
+const filteredBooks = van.derive(() => {
+  const list = bookList.val;
+  return bookFilter.val ? list.filter(matchesBook) : list;
+});
+
+const addressNext  = van.derive(() => nextVerse({ ...address.val }));
+const address2Next = van.derive(() => nextVerse({ ...address2.val }));
+const line2Next    = van.derive(() => addressContent(addressNext.val,  s.verseNumbers));
+const line4Next    = van.derive(() => addressContent(address2Next.val, s.verseNumbers));
+
+/* ═══════════════════════ Effects ═══════════════════════ */
+// Keep the broadcast "program" lines in sync with the current address.
+van.derive(() => { s.line1 = addressAsString(address.val); });
+van.derive(() => { s.line2 = addressContent(address.val, s.verseNumbers); });
+van.derive(() => { address2.val; s.line3 = addressAsString(address2.val); });
+van.derive(() => { address2.val; s.line4 = addressContent(address2.val, s.verseNumbers); });
+
+// Lazy-load the current and next chapter for both bible panes.
+van.derive(() => ensureChapter(address.val.bible,     address.val.book,     address.val.chapter));
+van.derive(() => ensureChapter(addressNext.val.bible, addressNext.val.book, addressNext.val.chapter));
+van.derive(() => { if (address2.val.bible)     ensureChapter(address2.val.bible,     address2.val.book,     address2.val.chapter); });
+van.derive(() => { if (address2Next.val.bible) ensureChapter(address2Next.val.bible, address2Next.val.book, address2Next.val.chapter); });
+
+/* ═══════════════════════ Pure helpers ═══════════════════════ */
+function matchesBook(book) {
+  const prefix = bookFilter.val.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const name = book.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return (
+    name.startsWith(prefix) ||
+    book.abbreviation.startsWith(prefix) ||
+    (book.aliases && book.aliases.some(a => a.toLowerCase().startsWith(prefix))) ||
+    (prefix.length >= 2 && name.includes(" " + prefix))
+  );
+}
+
+function equalAddresses(a, b) {
+  return b !== undefined &&
+    a.book == b.book && a.chapter == b.chapter &&
+    a.verse == b.verse && a.vcount == b.vcount;
+}
+
+function addressAsString(a) {
+  if (!a || !a.bible) return "";
+  const book = bibles[a.bible].books[a.book];
+  if (!book) return "";
+  let out = book.name + " " + a.chapter;
+  if (a.verse) {
+    out += "," + a.verse;
+    if (a.vcount > 1) out += "-" + (+a.verse + a.vcount - 1);
+  }
+  return out;
+}
+
+function addressContent(a, numbers) {
+  dataVersion.val; // re-evaluate once chapter data arrives
+  if (!a || !a.bible) return "";
+  const book = bibles[a.bible].books[a.book];
+  if (!book || !book.chapters) return "";
+  let content = "";
+  if (a.verse && book.chapters[a.chapter]) {
+    for (let i = +a.verse; i < +a.verse + a.vcount; i++) {
+      content += "\n";
+      if (numbers) content += `<sup>${i}</sup>`;
+      content += book.chapters[a.chapter][i - 1] || "";
+    }
+  }
+  return content;
+}
+
+/* ═══════════════════════ Mutators ═══════════════════════ */
+function addToHistory(a) {
+  const next = [{ book: a.book, chapter: a.chapter, verse: a.verse, vcount: a.vcount }, ...history.val];
+  history.val = next.filter((h, i) => i === 0 || !equalAddresses(h, a));
+}
+const removeHistory = (i) => () => { history.val = history.val.filter((_, idx) => idx !== i); };
+
+const addressSelector = (a) => () => {
+  if (s.hideOnSelector) s.show = false;
+  s.book = a.book;
+  s.chapter = a.chapter || "";
+  s.verse = a.verse || "";
+  s.vcount = a.vcount || 1;
+  // chapters load lazily via the ensureChapter effects above
+};
+
+function toggleShown() {
+  s.show = !s.show;
+  if (s.show) addToHistory(address.val);
+}
+const sendToProgram = () => {};
+
+/* navigation operates on a copy of an address */
+function prevBook(a) {
+  const list = bibles[s.bible].bookslist;
+  a.book = list[(books1.val[a.book].index - 1 + list.length) % list.length].abbreviation;
+  return a;
+}
+function nextBook(a) {
+  const list = bibles[s.bible].bookslist;
+  a.book = list[(books1.val[a.book].index + 1) % list.length].abbreviation;
+  return a;
+}
+function prevChapter(a) {
+  a.chapter = +a.chapter - 1;
+  if (a.chapter <= 0) {
+    a = prevBook(a);
+    a.chapter = books1.val[a.book]?.chapterCount || Object.keys(books1.val[a.book]?.chapters || {}).length;
+  }
+  return a;
+}
+function nextChapter(a) {
+  a.chapter = +a.chapter + 1;
+  if (a.chapter > bookLength.val) { a.chapter = 1; a = nextBook(a); }
+  a.verse = 1;
+  return a;
+}
+function prevVerse(a) {
+  a.verse = +a.verse - a.vcount;
+  if (a.verse <= 0) {
+    a = prevChapter(a);
+    a.verse = books1.val[a.book]?.chapters?.[a.chapter]?.length || 1;
+  }
+  return a;
+}
+function nextVerse(a) {
+  a.verse = +a.verse + a.vcount;
+  if (a.verse > chapterLength.val) a = nextChapter(a);
+  return a;
+}
+
+function gotoPrevVerse() { s.verse = Math.max(1, s.verse - s.vcount); }
+function gotoNextVerse() {
+  const a = nextVerse({ ...address.val });
+  s.book = a.book; s.chapter = a.chapter; s.verse = a.verse;
+}
+
+const changeBible1 = (e) => { s.bible = e.target.value; };
+const changeBible2 = (e) => { s.bible2 = e.target.value; };
+
+// adapter so NumberPad writes through the broadcasting setter
+const bind = (key) => ({ get: () => s.states[key].val, set: (v) => { s[key] = v; } });
+
+/* ═══════════════════════ Components ═══════════════════════ */
+function NumberPad({ value, max = 99999999 }) {
+  const maxOf = () => {
+    const m = max && typeof max === "object" && "val" in max ? max.val : Number(max);
+    return m >= 1 ? m : 99999999;
+  };
+  const press = (n) => () => value.set(Math.min((+value.get() || 0) * 10 + n, maxOf()));
+  const backspace = () => value.set(Math.floor(+value.get() / 10) || "");
+  const clear = () => value.set("");
+  return div({ class: "numberpad" },
+    [1, 2, 3, 4, 5, 6, 7, 8, 9].map(n =>
+      button({ class: "btn btn-primary", onclick: press(n) }, n)),
+    button({ class: "btn btn-primary", onclick: backspace, disabled: () => !value.get() }, "←"),
+    button({ class: "btn btn-primary", onclick: press(0) }, "0"),
+    button({ class: "btn btn-primary", onclick: clear,     disabled: () => !value.get() }, "C"),
+  );
+}
+
+/* Reactive container: whenever its van dependencies change, render() is re-run
+   and the element's children are replaced by whatever it returns
+   (DOM node | array | string | null). Needed because VanJS stringifies arrays
+   returned from function children (=> "[object HTMLButtonElement]"). */
+function appendAll(el, out) {
+  if (out == null || out === false) return;
+  if (Array.isArray(out)) for (const c of out) appendAll(el, c);
+  else el.append(out);
+}
+function live(tag, props, render) {
+  const el = tag(props);
+  van.derive(() => { el.replaceChildren(); appendAll(el, render()); });
+  return el;
+}
+
+// a div whose innerHTML tracks a state/derive of an HTML string
+function previewDiv(className, html$) {
+  const el = div({ class: className });
+  van.derive(() => { el.innerHTML = html$.val ?? ""; });
+  return el;
+}
+
+// a <select> that keeps its value in sync with a reactive getter.
+// `options` are option SPEC objects ({value,label}); fresh <option> nodes are built
+// for each select so they're never shared.
+function boundSelect(getValue, onchange, options) {
+  const el = select({ onchange }, options.map(o => option({ value: o.value }, o.label)));
+  van.derive(() => { el.value = String(getValue()); });
+  return el;
+}
+
+/* ═══════════════════════ App ═══════════════════════ */
+function BibleApp() {
+  // connect to the sync transport (default: gun); room/password come from the URL
+  s.connect({
+    space: "bible",
+    password: location.hash.slice(1) || "demo",
+    ...Object.fromEntries(new URLSearchParams(location.search)),
+  });
+
+  const mainPreview  = previewDiv("preview",       van.derive(() => `${s.line1}<br/>${s.line2}`));
+  const nextPreview  = previewDiv("preview next",  line2Next);
+  const main2Preview = previewDiv("preview",       van.derive(() => `${s.line3}<br/>${s.line4}`));
+  const next2Preview = previewDiv("preview next",  line4Next);
+
+  return div({},
+    // book filter + list
+    div({ class: "input-group" },
+      input({ class: "form-control", type: "text", placeholder: "filter",
+              value: () => bookFilter.val, oninput: (e) => bookFilter.val = e.target.value }),
+      button({ type: "button", class: "form-control btn btn-secondary clear",
+               onclick: () => bookFilter.val = "" }, "×"),
+    ),
+    live(div, { class: "books-filter" },
+      () => filteredBooks.val.map(b =>
+        button({ class: () => `book-item btn ${b.abbreviation === s.book ? "btn-primary" : ""}`,
+                 onclick: addressSelector({ book: b.abbreviation }) }, b.name))),
+
+    // history
+    live(div, { class: "address-filter" },
+      () => history.val.map((addr, i) =>
+        div({ class: "address-item btn-group" },
+          button({ class: () => `address-set btn ${equalAddresses(addr, address.val) ? "btn-primary" : ""}`,
+                   onclick: addressSelector(addr) },
+                 () => addressAsString({ bible: s.bible, ...addr }) || `${addr.book} ${addr.chapter},${addr.verse}`),
+          button({ class: "btn btn-secondary address-remove", onclick: removeHistory(i) }, "×"),
+        ))),
+
+    // chapter controls
+    div({ class: "control-block" },
+      () => `Kapitola: ${s.chapter} z ${bookLength.val}`,
+      NumberPad({ value: bind("chapter"), max: bookLength }),
+      button({ class: "btn btn-primary", onclick: () => s.chapter = Math.max(1, s.chapter - 1) }, "⇦"),
+      button({ class: "btn btn-primary", onclick: () => s.chapter = Math.min(s.chapter + 1, bookLength.val) }, "⇨"),
+      br(),
+      live(span, { class: "live" },
+        () => s.splitButton
+          ? [
+              button({ class: "control-button btn btn-success",
+                       onclick: () => { s.program = { line1: s.line1, line2: s.line2, line3: s.line3, line4: s.line4 }; } }, "Zobraziť"),
+              button({ class: "btn btn-danger",
+                       onclick: () => { s.program = {}; } }, "×"),
+            ]
+          : button({ class: () => `btn control-button ${s.show ? "btn-danger" : "btn-success"}`,
+                     onclick: toggleShown },
+                   () => s.show ? "Skryť" : "Zobraziť")),
+    ),
+
+    // verse controls
+    div({ class: "control-block" },
+      () => `Verš: ${s.verse}${s.vcount > 1 ? ` - ${+s.verse + s.vcount - 1}` : ""} z ${chapterLength.val}`,
+      NumberPad({ value: bind("verse"), max: chapterLength }),
+      button({ class: "btn btn-primary", onclick: gotoPrevVerse, disabled: () => s.verse <= 1 }, "⇦"),
+      button({ class: "btn btn-primary", onclick: gotoNextVerse, disabled: () => +s.verse + s.vcount > chapterLength.val }, "⇨"),
+      br(),
+      button({ disabled: true, class: "spacer", "aria-label": "empty" }),
+      button({ class: "btn btn-primary", onclick: () => { s.vcount -= 1; }, disabled: () => s.vcount <= 1 }, "-1"),
+      button({ class: "btn btn-primary", onclick: () => { s.vcount += 1; }, disabled: () => s.vcount > chapterLength.val }, "+1"),
+      br(),
+      button({ disabled: true, class: "spacer", "aria-label": "empty" }),
+    ),
+
+    // previews
+    mainPreview,
+    // NOTE: must be wrapped in live() — a bare function child returning a DOM
+    // node gets stringified by VanJS on re-evaluation (only the first run
+    // appends the node), so toggling showNextVerses off→on would stop
+    // re-inserting nextPreview. live() replaces children on every re-run.
+    live(span, { class: "live" }, () => s.showNextVerses ? nextPreview : null),
+    live(span, { class: "live" }, () => {
+      if (!s.bible2) return null;
+      const out = [main2Preview];
+      if (s.showNextVerses) out.push(next2Preview);
+      return out;
+    }),
+
+    br(),
+
+    // settings
+    div({ class: "settings" },
+      div({ class: "bible" }, "Preklad: ",
+        boundSelect(() => s.bible, changeBible1, bibleOptionSpecs)),
+      div({ class: "bible" }, "Preklad 2: ",
+        boundSelect(() => s.bible2, changeBible2, [{ value: "", label: "Žiadny" }, ...bibleOptionSpecs])),
+      div({ class: "theme" }, "Téma: ",
+        boundSelect(() => s.theme, (e) => s.theme = e.target.value, [
+          { value: "", label: "Predvolená" },
+          { value: "simple-with-shadow", label: "Jednoduché s tieňom" },
+          { value: "fullscreen-white-bg", label: "Fullscreen biele pozadie" },
+        ])),
+      div({ class: "bible" }, label(
+        input({ type: "checkbox", checked: () => s.verseNumbers, onchange: (e) => s.verseNumbers = e.target.checked }),
+        " Čísla veršov")),
+      div({ class: "bible" }, label(
+        input({ type: "checkbox", checked: () => s.showNextVerses, onchange: (e) => s.showNextVerses = e.target.checked }),
+        " Nasledujúce verše")),
+      div({ class: "bible" }, label(
+        input({ type: "checkbox", checked: () => s.hideOnSelector, onchange: (e) => s.hideOnSelector = e.target.checked }),
+        " Skryť pri výbere knihy")),
+      div({ class: "bible" }, label(
+        input({ type: "checkbox", checked: () => s.splitButton, onchange: (e) => s.splitButton = e.target.checked }),
+        " Texty do programu až po kliknutí")),
+    ),
+  );
+}
+
+van.add(document.body, BibleApp());
+</script>
+</head>
+<body></body>
+</html>
