@@ -13,8 +13,11 @@
   import {index as bot} from "./bot.json.js"
   import {index as csp} from "./csp.json.js"
   import {index as kjv} from "./kjv.json.js"
+  import {index as nlt} from "./nlt.json.js"
+  import {index as nkjv} from "./nkjv.json.js"
+  import {index as amp} from "./amp.json.js"
 
-  const bibles = $state({roh, seb, sep, ssv, bot, csp, kjv});
+  const bibles = $state({roh, seb, sep, ssv, bot, csp, kjv, nlt, nkjv, amp});
   /* Set index for each book */
   for (const [id, bible] of Object.entries(bibles)) {
     bible.books = {};
@@ -60,7 +63,7 @@
   let address = $derived({bible: s.bible, book: s.book, chapter: s.chapter, verse: s.verse, vcount: s.vcount});
   let address2 = $derived({bible: s.bible2, book: s.book, chapter: s.chapter, verse: s.verse, vcount: s.vcount});
   let books1 = $derived(bibles[s.bible].books);
-  let bookLength = $derived(Object.keys(bibles[s.bible].books[s.book].chapters||{}).length);
+  let bookLength = $derived(bibles[s.bible].books[s.book]?.chapterCount || Object.keys(bibles[s.bible].books[s.book].chapters||{}).length);
   let chapterLength = $derived(((bibles[s.bible].books[s.book].chapters||{})[s.chapter]||[]).length);
   let addressNext = $derived(nextVerse({...address}));
   let address2Next = $derived(nextVerse({...address2}));
@@ -68,6 +71,11 @@
   let line4Next = $derived(addressContent(address2Next, s.verseNumbers));
   let bookList = $derived(bibles[s.bible].bookslist);
   let filteredBooks = $derived(bookFilter ? bookList.filter(matchesBook) : bookList);
+
+  $effect(() => { ensureChapter(address.bible, address.book, address.chapter); });
+  $effect(() => { ensureChapter(addressNext.bible, addressNext.book, addressNext.chapter); });
+  $effect(() => { if (address2.bible) ensureChapter(address2.bible, address2.book, address2.chapter); });
+  $effect(() => { if (address2Next.bible) ensureChapter(address2Next.bible, address2Next.book, address2Next.chapter); });
 
 	onMount(() => {
     s.connect({
@@ -78,17 +86,78 @@
   })
 
 
-  async function fetchChapters(bibleid, abbreviation) {
-    // console.log('fetchChapters(', bibleid, abbreviation);
-    if (!bibleid) return;
-    let chapters = bibles[bibleid].books[abbreviation]?.chapters;
-    if (chapters) {
-      return chapters;
-    } else {
-      const res = await fetch(`/bible/${bibleid}/${abbreviation}.json`);
-      chapters = await res.json();
+  const inflight = new Map();                 // non-reactive: key -> Promise
+  const CACHE_PREFIX = 'bible-chapter:';
+  const CACHE_VERSION = 1;                    // bump to invalidate stored shape
+
+  function cacheKey(bibleid, abbreviation, chapter) {
+    return `${CACHE_PREFIX}${CACHE_VERSION}:${bibleid}:${abbreviation}:${chapter}`;
+  }
+  function readCache(bibleid, abbreviation, chapter) {
+    try {
+      const raw = localStorage.getItem(cacheKey(bibleid, abbreviation, chapter));
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  }
+  function writeCache(bibleid, abbreviation, chapter, verses) {
+    try {
+      localStorage.setItem(cacheKey(bibleid, abbreviation, chapter), JSON.stringify(verses));
+    } catch { /* quota exceeded — ignore, in-memory cache still works */ }
+  }
+
+  /* Make sure book.chapters[chapter] is present, fetching only THAT chapter.
+     Writes into the $state tree so display effects re-run automatically.       */
+  async function ensureChapter(bibleid, abbreviation, chapter) {
+    if (!bibleid || !abbreviation || !chapter) return;
+    const bible = bibles[bibleid];
+    const book = bible?.books?.[abbreviation];
+    if (!book) return;
+    if (book.chapters?.[chapter]) return book.chapters[chapter];
+    const key = `${bibleid}:${abbreviation}:${chapter}`;
+    if (inflight.has(key)) return inflight.get(key);   // request already running
+    const p = (async () => {
+      try {
+        let verses = readCache(bibleid, abbreviation, chapter);   // 1. persistent
+        if (!verses) {
+          if (bible.api) {
+            verses = await fetchChapterFromApi(bible.api, book, chapter);  // 2. API
+            writeCache(bibleid, abbreviation, chapter, verses);
+          } else {
+            // static: one local file = whole book; load once, fill every chapter
+            const all = await fetchStaticBook(bibleid, abbreviation);
+            book.chapters ??= {};
+            for (const ch of Object.keys(all)) book.chapters[ch] = all[ch];
+            return;
+          }
+        }
+        book.chapters ??= {};
+        book.chapters[chapter] = verses;                  // reactive -> re-render
+      } finally {
+        inflight.delete(key);
+      }
+    })();
+    inflight.set(key, p);
+    return p;
+  }
+
+  async function fetchStaticBook(bibleid, abbreviation) {
+    const res = await fetch(`/bible/${bibleid}/${abbreviation}.json`);
+    return await res.json();
+  }
+
+  async function fetchChapterFromApi(api, book, chapter) {
+    /* bolls.life: GET /get-text/{translation}/{bookNumber}/{chapter}/
+       bookNumber is the 1-based canon position (== book.index + 1).
+       Returns [{verse, text}, ...]; reshaped to [v1, v2, ...].                */
+    const bookNum = book.index + 1;
+    const res = await fetch(`${api.base}/get-text/${api.translation}/${bookNum}/${chapter}/`);
+    const verses = await res.json();
+    const arr = [];
+    for (const v of verses) {
+      const n = (v.verse || 1) - 1;
+      arr[n] = (arr[n] ? arr[n] + ' ' : '') + v.text;   // tolerate dupe verse keys
     }
-    return chapters;
+    return arr;
   }
 
   function matchesBook(book) {
@@ -160,18 +229,11 @@
   function addressSelector(a) {
     return function () {
       if (s.hideOnSelector) s.show = false;
-      fetchChapters(s.bible, a.book).then((chapters) => {
-        bibles[s.bible].books[a.book].chapters = chapters;
-        s.book = a.book;
-        s.chapter = a.chapter || '';
-        s.verse = a.verse || '';
-        s.vcount = a.vcount || 1;
-      });
-      if (address2.bible && s.bible != address2.bible && !bibles[address2.bible].books[a.book].chapters) {
-        fetchChapters(address2.bible, a.book).then((chapters) => {
-          bibles[address2.bible].books[a.book].chapters = chapters;
-        });
-      }
+      s.book = a.book;
+      s.chapter = a.chapter || '';
+      s.verse = a.verse || '';
+      s.vcount = a.vcount || 1;
+      // chapters are loaded lazily per-chapter by the $effect below (cached)
     };
   }
 
@@ -212,7 +274,7 @@
     a.chapter = +a.chapter - 1;
     if (a.chapter <= 0) {
       a = prevBook(a);
-      a.chapter = Object.keys(books1[a.book].chapters||{}).length;
+      a.chapter = books1[a.book]?.chapterCount || Object.keys(books1[a.book].chapters||{}).length;
     }
     return a;
   };
@@ -256,22 +318,10 @@
     // if (program.line1) sendToProgram;
   }
   function changeBible1(event) {
-    const newbible = event.target.value;
-    fetchChapters(newbible, s.book).then((chapters) => {
-      bibles[newbible].books[s.book].chapters = chapters;
-      s.bible = newbible;
-    });
+    s.bible = event.target.value;
   }
   function changeBible2(event) {
-    const newbible = event.target.value;
-    if (!newbible) {
-      s.bible2 = newbible;
-      return;
-    }
-    fetchChapters(newbible, s.book).then((chapters) => {
-      bibles[newbible].books[s.book].chapters = chapters;
-      s.bible2 = newbible;
-    })
+    s.bible2 = event.target.value;
   }
 </script>
 
