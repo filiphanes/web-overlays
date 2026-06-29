@@ -7,11 +7,6 @@ Simple and powerfull remote controlled html pages useful for overlays in OBS Stu
 - multiple overlay-controller groups on 1 server instance (via different websocket paths)
 - server is needed only for first connect, both controller and overlay holds state info
 
-# Install
-NodeJS is needed. You can download it from https://nodejs.org/en/
-
-    npm install
-
 # Run
 ## 1. Open controller
 Open in browser `scoreboard/controller.html`.
@@ -47,11 +42,11 @@ You can create your own overlay and associated controller without implementing s
 
 # Self-hosted server
 
-    HOST=0.0.0.0 PORT=8089 node server-ws.cjs
+    HOST=0.0.0.0 PORT=8089 node server/ws.cjs
     or 
-    HOST=0.0.0.0 PORT=3000 node server-gun.cjs
+    HOST=0.0.0.0 PORT=3000 node server/gun.cjs
     or 
-    HOST=0.0.0.0 PORT=8081 node server-mqtt.cjs
+    HOST=0.0.0.0 PORT=8081 node server/mqtt.cjs
 
 ## Server API
 https://gun.eco/docs/API
@@ -59,17 +54,8 @@ https://gun.eco/docs/API
 ## Developing
 Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 ```bash
-npm run dev
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+python3 -m http.server 8080 -d static
 ```
-## Building
-To create a production version of your app:
-```bash
-npm run build
-```
-You can preview the production build with `npm run preview`.
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
 
 
 # Thanks
@@ -79,7 +65,6 @@ This project was inspired by
 - https://github.com/Scrxtchy/ts3-overlay-ws
 - https://github.com/slugalisk/win-loss-overlay
 - https://github.com/filiphanes/websocket-overlays
-- https://github.com/ak5/svelte-gun-example
 
 # TODO
 - more overlays
