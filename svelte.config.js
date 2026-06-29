@@ -7,8 +7,8 @@ const config = {
 		prerender: {
 			// The home page and most controllers (bible/, lowerthird/, scoreboard/,
 			// clock/, editor/) are build-free static HTML files served straight from
-			// static/. The remaining Svelte routes (songs/,
-			// bible/svelte.html) are prerendered explicitly, without crawling links
+			// static/. The remaining Svelte route (bible/svelte.html) is prerendered
+			// explicitly, without crawling links
 			// — crawl: false keeps the crawler from following <a> tags into the
 			// static files (which are not routes and would 404).
 			entries: ['*'],

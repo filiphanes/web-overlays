@@ -5,7 +5,7 @@
 // Transport precedence (set in connect()): ws > mqtt > put > gun > broadcast.
 // gun + mqtt are loaded on demand from a CDN.
 
-import van from "./van-1.6.0.min.js";
+import van from "./van.js";
 
 const GLOBAL_SOURCES = {
   // local gun first (matches static/js convention), then public CDN fallback
@@ -86,13 +86,17 @@ class MqttBroker {
   send(k, v) { this.client.publish(this.options.path + k, JSON.stringify(v), { retain: true }); }
 }
 
-/* Reactive synced state: one van.state per key; getters/setters broadcast writes. */
+/* Reactive synced state: one van.state per key; getters/setters broadcast writes.
+   After connect() resolves, `self.root` holds the connected node when the
+   transport exposes one (e.g. the gun room node), so callers that need direct
+   collection access (songs/playlist maps) reuse the same connection. */
 export function multiBrokerState(init) {
   const states = {};
   for (const [k, v] of Object.entries(init)) states[k] = van.state(v);
   const brokers = [];
+  const self = { states, brokers };
 
-  async function connect(opts) {
+  self.connect = async function connect(opts) {
     const o = {
       gun: "https://gun.filiphanes.sk/gun",
       mqtt: undefined, ws: undefined, broadcast: undefined, put: undefined,
@@ -102,18 +106,23 @@ export function multiBrokerState(init) {
     Object.assign(o, opts);
     o.path = o.path || `${o.space}/${o.password}`;
     try {
-      if (o.ws)             brokers.push(new WebsocketBroker(o));
-      else if (o.mqtt)      { await ensureGlobal("mqtt", GLOBAL_SOURCES.mqtt); brokers.push(new MqttBroker(o)); }
-      else if (o.put)       brokers.push(new PutBroker(o));
-      else if (o.gun)       { await ensureGlobal("Gun",  GLOBAL_SOURCES.gun);  brokers.push(new GunBroker(o)); }
-      else if (o.broadcast) brokers.push(new BroadcastBroker(o));
+      let broker;
+      if (o.ws)             broker = new WebsocketBroker(o);
+      else if (o.mqtt)      { await ensureGlobal("mqtt", GLOBAL_SOURCES.mqtt); broker = new MqttBroker(o); }
+      else if (o.put)       broker = new PutBroker(o);
+      else if (o.gun)       { await ensureGlobal("Gun",  GLOBAL_SOURCES.gun);  broker = new GunBroker(o); }
+      else if (o.broadcast) broker = new BroadcastBroker(o);
+      if (broker) {
+        brokers.push(broker);
+        self.broker = broker;
+        if (broker.root) self.root = broker.root;
+      }
     } catch (e) {
       console.warn("[broker] running local-only:", e.message);
     }
-  }
+  };
   const send = (k, v) => { for (const b of brokers) b.send?.(k, v); };
 
-  const self = { connect, states };
   for (const key of Object.keys(init)) {
     Object.defineProperty(self, key, {
       enumerable: true,
@@ -123,5 +132,3 @@ export function multiBrokerState(init) {
   }
   return self;
 }
-
-export { van };
