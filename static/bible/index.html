@@ -233,6 +233,7 @@ const s = multiBrokerState({
   history: [defaultAddress],
   program: {},
   verseNumbers: false,
+  showTranslation: false,
   showNextVerses: true,
   hideOnSelector: true,
   splitButton: false,
@@ -262,9 +263,9 @@ const line4Next    = van.derive(() => addressContent(address2Next.val, s.verseNu
 
 /* ═══════════════════════ Effects ═══════════════════════ */
 // Keep the broadcast "program" lines in sync with the current address.
-van.derive(() => { s.line1 = addressAsString(address.val); });
+van.derive(() => { s.line1 = addressAsString(address.val, s.showTranslation); });
 van.derive(() => { s.line2 = addressContent(address.val, s.verseNumbers); });
-van.derive(() => { address2.val; s.line3 = addressAsString(address2.val); });
+van.derive(() => { address2.val; s.line3 = addressAsString(address2.val, s.showTranslation); });
 van.derive(() => { address2.val; s.line4 = addressContent(address2.val, s.verseNumbers); });
 
 // Lazy-load the current and next chapter for both bible panes.
@@ -291,7 +292,7 @@ function equalAddresses(a, b) {
     a.verse == b.verse && a.vcount == b.vcount;
 }
 
-function addressAsString(a) {
+function addressAsString(a, showTranslation) {
   if (!a || !a.bible) return "";
   const book = bibles[a.bible].books[a.book];
   if (!book) return "";
@@ -300,6 +301,7 @@ function addressAsString(a) {
     out += "," + a.verse;
     if (a.vcount > 1) out += "-" + (+a.verse + a.vcount - 1);
   }
+  if (showTranslation) out += ` (${bibles[a.bible].identifier.toUpperCase()})`;
   return out;
 }
 
@@ -390,7 +392,7 @@ const changeBible1 = (e) => { s.bible = e.target.value; };
 const changeBible2 = (e) => { s.bible2 = e.target.value; };
 
 // adapter so NumberPad writes through the broadcasting setter
-const bind = (key) => ({ get: () => s.states[key].val, set: (v) => { s[key] = v; } });
+const bind = (key) => ({ get: () => s[key], set: (v) => { s[key] = v; } });
 
 /* ═══════════════════════ Components ═══════════════════════ */
 function NumberPad({ value, max = 99999999 }) {
@@ -540,6 +542,9 @@ function BibleApp() {
           { value: "simple-with-shadow", label: "Jednoduché s tieňom" },
           { value: "fullscreen-white-bg", label: "Fullscreen biele pozadie" },
         ])),
+      div({ class: "bible" }, label(
+        input({ type: "checkbox", checked: () => s.showTranslation, onchange: (e) => s.showTranslation = e.target.checked }),
+        " Zobraziť preklad")),
       div({ class: "bible" }, label(
         input({ type: "checkbox", checked: () => s.verseNumbers, onchange: (e) => s.verseNumbers = e.target.checked }),
         " Čísla veršov")),

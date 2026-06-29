@@ -83,3 +83,38 @@ This project was inspired by
 
 # TODO
 - more overlays
+
+# Future ideas
+
+## `multiBrokerState` via a reactive Proxy
+
+Today `multiBrokerState` (in `static/js/broker.js` and `src/lib/broker.svelte.js`)
+builds one getter/setter per key with `Object.defineProperty`. That works but is
+fixed to the keys passed at construction — keys can't be added later, and every
+key costs a property descriptor.
+
+An alternative is to back the returned object with a single `Proxy` over a
+`Map` of `van.state`s. Same `s.show` ergonomics, plus dynamic keys for free
+(useful for a generic key/value editor or transports that surface arbitrary
+keys):
+
+```js
+function reactiveStore(seed, onSet) {
+  const $ = new Map();
+  const get$ = k => ($.has(k) ? $ : $.set(k, van.state(undefined))).get(k);
+  for (const [k, v] of Object.entries(seed)) get$(k).val = v;
+  return new Proxy({}, {
+    get:     (_, k) => get$(k).val,                 // tracks VanJS deps
+    set:     (_, k, v) => { get$(k).val = v; onSet(k, v); return true; },
+    ownKeys: () => [...$.keys()],
+    getOwnPropertyDescriptor: (_, k) =>
+      ({ enumerable: true, configurable: true, value: get$(k).val }),
+  });
+}
+// self[k] = reactiveStore(init, (k, v) => send(k, v));
+```
+
+Caveat: a Proxy is less greppable than named properties (`s.show` no longer has
+a literal definition) and needs the `ownKeys` / descriptor traps for
+`Object.keys()` and spread to work. Worth doing only if runtime-added keys
+become a real need; otherwise the current `defineProperty` loop is simpler.

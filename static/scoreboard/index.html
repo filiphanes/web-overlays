@@ -37,13 +37,13 @@ s.connect({
 // text input bound to a broadcasting state key
 const textIn = (key, id, placeholder) => input({
   class: "form-control", type: "text", id, placeholder,
-  value: () => s.states[key].val,
+  value: () => s[key],
   oninput: (e) => { s[key] = e.target.value; },
 });
 // number input bound to a broadcasting state key
 const numIn = (key, id) => input({
   class: "form-control", type: "number", id,
-  value: () => s.states[key].val,
+  value: () => s[key],
   oninput: (e) => { s[key] = e.target.value; },
 });
 

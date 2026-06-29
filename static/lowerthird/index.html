@@ -31,7 +31,7 @@ s.connect({
 // two-way bind an <input> (text) to a broadcasting state key
 const text = (key, extra) => input({
   class: "form-control", type: "text", ...extra,
-  value: () => s.states[key].val,
+  value: () => s[key],
   oninput: (e) => { s[key] = e.target.value; },
 });
 

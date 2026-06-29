@@ -87,14 +87,17 @@ class MqttBroker {
 }
 
 /* Reactive synced state: one van.state per key; getters/setters broadcast writes.
-   After connect() resolves, `self.root` holds the connected node when the
-   transport exposes one (e.g. the gun room node), so callers that need direct
-   collection access (songs/playlist maps) reuse the same connection. */
+   `states` is intentionally private — reads go through the per-key getters
+   (e.g. `s.show`), which still register VanJS dependencies since the getter
+   dereferences `.val`. After connect() resolves, `self.root` holds the
+   connected node when the transport exposes one (e.g. the gun room node), so
+   callers that need direct collection access (songs/playlist maps) reuse the
+   same connection. */
 export function multiBrokerState(init) {
   const states = {};
   for (const [k, v] of Object.entries(init)) states[k] = van.state(v);
   const brokers = [];
-  const self = { states, brokers };
+  const self = { brokers };
 
   self.connect = async function connect(opts) {
     const o = {
